@@ -1,0 +1,3764 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>ระบบติดตามงานค้าง Real-time (Online) | กลุ่มสาระสังคมศึกษาฯ</title>
+
+  <!-- Firebase Realtime Database SDK (Optional background listener) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="firebase_config.js"></script>
+  <script src="initial_data.js"></script>
+
+  <!-- Google Fonts: Prompt & Sarabun for crisp, modern Thai typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #eef2ff;
+      --primary-border: #c7d2fe;
+
+      --m3-accent: #0d9488;
+      --m3-accent-light: #f0fdfa;
+      --m3-accent-border: #99f6e4;
+
+      --m5-accent: #4f46e5;
+      --m5-accent-light: #eef2ff;
+      --m5-accent-border: #c7d2fe;
+      
+      --success: #059669;
+      --success-light: #ecfdf5;
+      --success-border: #a7f3d0;
+      --success-text: #065f46;
+      
+      --warning: #d97706;
+      --warning-light: #fffbeb;
+      --warning-border: #fde68a;
+      --warning-text: #92400e;
+      
+      --danger: #e11d48;
+      --danger-light: #fff1f2;
+      --danger-border: #fecdd3;
+      --danger-text: #9f1239;
+      
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --text-subtle: #94a3b8;
+      --border: #e2e8f0;
+      --border-light: #f1f5f9;
+      
+      --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+      --shadow: 0 4px 10px -2px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.03);
+      --shadow-md: 0 10px 20px -3px rgba(15, 23, 42, 0.06), 0 4px 6px -4px rgba(15, 23, 42, 0.03);
+      --shadow-lg: 0 20px 30px -6px rgba(15, 23, 42, 0.08), 0 8px 12px -4px rgba(15, 23, 42, 0.03);
+      
+      --radius-sm: 8px;
+      --radius: 14px;
+      --radius-lg: 22px;
+      --radius-pill: 9999px;
+      
+      --font-scale: 1;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Prompt', 'Sarabun', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    html, body {
+      overflow-x: hidden;
+      width: 100%;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    body {
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(at 15% 15%, rgba(99, 102, 241, 0.035) 0px, transparent 45%),
+        radial-gradient(at 85% 85%, rgba(13, 148, 136, 0.035) 0px, transparent 45%);
+      background-attachment: fixed;
+      color: var(--text);
+      font-size: calc(15px * var(--font-scale));
+      line-height: 1.55;
+      padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+      padding-left: env(safe-area-inset-left, 0px);
+      padding-right: env(safe-area-inset-right, 0px);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Modern Glassmorphic Header with Safe-Area */
+    header {
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid rgba(226, 232, 240, 0.85);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.03);
+      padding-top: env(safe-area-inset-top, 0px);
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 18px;
+    }
+
+    .header-content {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 12px 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .brand:hover {
+      transform: translateY(-1px);
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, #4f46e5, #3b82f6);
+      color: white;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 4px 10px -1px rgba(79, 70, 229, 0.25);
+    }
+
+    .brand-title {
+      font-weight: 800;
+      font-size: calc(18px * var(--font-scale));
+      color: #0f172a;
+      letter-spacing: -0.3px;
+    }
+
+    .brand-subtitle {
+      font-size: calc(12px * var(--font-scale));
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* Live Sync Soft Badge */
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: #f0fdf4;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+      padding: 5px 12px;
+      border-radius: var(--radius-pill);
+      font-size: calc(12px * var(--font-scale));
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(22, 101, 52, 0.05);
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      background-color: #10b981;
+      border-radius: 50%;
+      animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+      }
+      50% {
+        opacity: 0.85;
+        transform: scale(1.15);
+        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+      }
+    }
+
+    /* Tactile Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 9px 16px;
+      border-radius: var(--radius);
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: var(--text);
+      font-size: calc(13px * var(--font-scale));
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+      text-decoration: none;
+    }
+
+    .btn:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+      transform: translateY(-1px);
+      box-shadow: var(--shadow);
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #4f46e5, #4338ca);
+      color: #ffffff;
+      border-color: #4338ca;
+      box-shadow: 0 2px 6px -1px rgba(79, 70, 229, 0.3);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #4338ca, #3730a3);
+      box-shadow: 0 4px 12px -2px rgba(79, 70, 229, 0.4);
+      transform: translateY(-2px);
+      color: #ffffff;
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 16px;
+      border-radius: var(--radius);
+      background: #ffffff;
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-weight: 600;
+      cursor: pointer;
+      font-size: calc(13px * var(--font-scale));
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .back-btn:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+      transform: translateX(-2px);
+      box-shadow: var(--shadow);
+    }
+
+    .back-btn:active {
+      transform: scale(0.97);
+    }
+
+    /* Smooth View Transitions */
+    @keyframes viewFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .view-animate {
+      animation: viewFadeIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* ========================================== */
+    /* VIEW 1: PORTAL / GRADE SELECTOR           */
+    /* ========================================== */
+    .portal-hero {
+      text-align: center;
+      max-width: 680px;
+      margin: 44px auto 36px auto;
+      padding: 0 16px;
+    }
+
+    .portal-hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 14px;
+      background: #eef2ff;
+      color: #4f46e5;
+      border: 1px solid #c7d2fe;
+      border-radius: var(--radius-pill);
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+
+    .portal-hero-title {
+      font-size: calc(28px * var(--font-scale));
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.5px;
+      margin-bottom: 10px;
+      line-height: 1.35;
+    }
+
+    .portal-hero-desc {
+      font-size: calc(15px * var(--font-scale));
+      color: var(--text-muted);
+      line-height: 1.65;
+    }
+
+    .portal-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+      max-width: 1180px;
+      margin: 0 auto 52px auto;
+    }
+
+    .portal-card {
+      background: #ffffff;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 36px 32px;
+      cursor: pointer;
+      transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      box-shadow: var(--shadow);
+      position: relative;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .portal-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      transition: all 0.2s;
+    }
+
+    .portal-card.m3-card::before {
+      background: linear-gradient(90deg, #0d9488, #14b8a6);
+    }
+
+    .portal-card.m5-card::before {
+      background: linear-gradient(90deg, #6366f1, #4f46e5);
+    }
+
+    .portal-card.m6-card::before {
+      background: linear-gradient(90deg, #f59e0b, #ea580c);
+    }
+
+    .portal-card:hover {
+      transform: translateY(-6px);
+      border-color: #cbd5e1;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .portal-card:active {
+      transform: scale(0.985);
+    }
+
+    .portal-icon-wrapper {
+      width: 90px;
+      height: 90px;
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      margin: 0 auto;
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .m3-card .portal-icon-wrapper {
+      background: #f0fdfa;
+      border: 1px solid #ccfbf1;
+    }
+
+    .m5-card .portal-icon-wrapper {
+      background: #eef2ff;
+      border: 1px solid #e0e7ff;
+    }
+
+    .m6-card .portal-icon-wrapper {
+      background: #fffbeb;
+      border: 1px solid #fef3c7;
+    }
+
+    .portal-card:hover .portal-icon-wrapper {
+      transform: scale(1.08) rotate(3deg);
+    }
+
+    .portal-grade-title {
+      font-size: calc(23px * var(--font-scale));
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .portal-subject {
+      font-size: calc(14px * var(--font-scale));
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    .portal-stats-box {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      background: #f8fafc;
+      padding: 16px 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+
+    .portal-stat-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .portal-stat-num {
+      font-size: calc(19px * var(--font-scale));
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .portal-stat-lbl {
+      font-size: calc(11px * var(--font-scale));
+      color: var(--text-muted);
+      margin-top: 3px;
+      font-weight: 500;
+    }
+
+    .portal-action-btn {
+      width: 100%;
+      padding: 14px 22px;
+      border-radius: var(--radius);
+      background: #f8fafc;
+      color: var(--text);
+      font-weight: 700;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: calc(15px * var(--font-scale));
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      margin-top: 4px;
+    }
+
+    .portal-card.m3-card:hover .portal-action-btn {
+      background: linear-gradient(135deg, #0d9488, #0f766e);
+      color: #ffffff;
+      border-color: #0d9488;
+      box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+    }
+
+    .portal-card.m5-card:hover .portal-action-btn {
+      background: linear-gradient(135deg, #4f46e5, #4338ca);
+      color: #ffffff;
+      border-color: #4f46e5;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    }
+
+    .portal-card.m6-card:hover .portal-action-btn {
+      background: linear-gradient(135deg, #ea580c, #c2410c);
+      color: #ffffff;
+      border-color: #ea580c;
+      box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);
+    }
+
+    /* ========================================== */
+    /* VIEW 2 & 3: DASHBOARD & COMMON NAVIGATION  */
+    /* ========================================== */
+    .view-nav-header {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 22px;
+      margin-top: 22px;
+      margin-bottom: 22px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Statistics Cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    .stat-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card:hover {
+      box-shadow: var(--shadow);
+      transform: translateY(-2px);
+    }
+
+    .stat-label {
+      font-size: calc(13px * var(--font-scale));
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .stat-value {
+      font-size: calc(28px * var(--font-scale));
+      font-weight: 800;
+      margin: 6px 0 2px 0;
+      color: #0f172a;
+      letter-spacing: -0.5px;
+    }
+
+    .stat-subtext {
+      font-size: calc(12px * var(--font-scale));
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* Classroom Cards in Dashboard */
+    .room-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+      margin-top: 18px;
+    }
+
+    .room-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 20px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+    }
+
+    .room-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-md);
+      border-color: #cbd5e1;
+    }
+
+    .room-card:active {
+      transform: scale(0.98);
+    }
+
+    .room-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .room-card-title {
+      font-size: calc(18px * var(--font-scale));
+      font-weight: 800;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .room-card-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      background: #f8fafc;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .room-stat-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .room-stat-num {
+      font-size: calc(16.5px * var(--font-scale));
+      font-weight: 800;
+    }
+
+    .room-stat-txt {
+      font-size: calc(11.5px * var(--font-scale));
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .room-btn-action {
+      width: 100%;
+      padding: 11px 16px;
+      border-radius: var(--radius);
+      background: #f8fafc;
+      color: #334155;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      font-size: calc(13.5px * var(--font-scale));
+    }
+
+    .room-card:hover .room-btn-action {
+      background: linear-gradient(135deg, #4f46e5, #4338ca);
+      color: #ffffff;
+      border-color: #4f46e5;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+    }
+
+    /* ========================================== */
+    /* VIEW 3: CLASSROOM & STUDENT CARDS         */
+    /* ========================================== */
+    .room-tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 4px 2px 10px 2px;
+      margin-bottom: 20px;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x proximity;
+    }
+
+    .room-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .room-tab {
+      padding: 9px 18px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-pill);
+      font-weight: 600;
+      font-size: calc(13px * var(--font-scale));
+      cursor: pointer;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #475569;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+      flex-shrink: 0;
+      scroll-snap-align: start;
+      touch-action: manipulation;
+    }
+
+    .room-tab:hover {
+      background: #f8fafc;
+      color: #0f172a;
+      transform: translateY(-1px);
+    }
+
+    .room-tab:active {
+      transform: scale(0.96);
+    }
+
+    .room-tab.active {
+      background: #0f172a;
+      color: #ffffff;
+      border-color: #0f172a;
+      box-shadow: var(--shadow);
+    }
+
+    .room-tab-badge {
+      font-size: calc(11px * var(--font-scale));
+      padding: 2px 8px;
+      border-radius: var(--radius-pill);
+      background: #f1f5f9;
+      color: #475569;
+      font-weight: 600;
+    }
+
+    .room-tab.active .room-tab-badge {
+      background: rgba(255, 255, 255, 0.22);
+      color: #ffffff;
+    }
+
+    /* Toolbar: Search & Segmented Filter */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .search-box {
+      position: relative;
+      flex: 1;
+      min-width: 0;
+      width: 100%;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 12px 18px 12px 42px;
+      border-radius: var(--radius);
+      border: 1.5px solid var(--border);
+      background: #ffffff;
+      font-size: calc(14px * var(--font-scale));
+      outline: none;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      color: #0f172a;
+    }
+
+    .search-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
+      background: #ffffff;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-subtle);
+      font-size: 16px;
+      pointer-events: none;
+    }
+
+    .filter-group {
+      display: inline-flex;
+      background: #f1f5f9;
+      border-radius: var(--radius);
+      padding: 4px;
+      gap: 3px;
+      border: 1px solid var(--border);
+    }
+
+    .filter-btn {
+      border: none;
+      background: transparent;
+      padding: 8px 15px;
+      border-radius: 10px;
+      font-size: calc(13px * var(--font-scale));
+      font-weight: 600;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .filter-btn:hover {
+      color: #0f172a;
+    }
+
+    .filter-btn.active {
+      background: #ffffff;
+      color: #0f172a;
+      font-weight: 700;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+    }
+
+    /* Student Cards & Staggered Animations */
+    @keyframes cardEntrance {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .student-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    .student-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+      position: relative;
+      animation: cardEntrance 0.35s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    }
+
+    .student-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+      border-color: #cbd5e1;
+    }
+
+    .student-card:active {
+      transform: scale(0.98);
+    }
+
+    .student-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .student-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .student-number {
+      width: 36px;
+      height: 36px;
+      background: #f1f5f9;
+      color: #1e293b;
+      font-weight: 800;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: calc(14px * var(--font-scale));
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .student-name {
+      font-weight: 700;
+      font-size: calc(15.5px * var(--font-scale));
+      color: #0f172a;
+      line-height: 1.35;
+      overflow-wrap: break-word;
+      word-break: break-word;
+    }
+
+    .student-id {
+      font-size: calc(12px * var(--font-scale));
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    /* Soft, friendly badges - non-aggressive colors */
+    .badge {
+      font-size: calc(11.5px * var(--font-scale));
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .badge-success { 
+      background: var(--success-light); 
+      color: var(--success-text); 
+      border: 1px solid var(--success-border);
+    }
+    .badge-warning { 
+      background: var(--warning-light); 
+      color: var(--warning-text); 
+      border: 1px solid var(--warning-border);
+    }
+    .badge-danger { 
+      background: var(--danger-light); 
+      color: var(--danger-text); 
+      border: 1px solid var(--danger-border);
+    }
+
+    .items-container {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: calc(12.5px * var(--font-scale));
+    }
+
+    .item-chip {
+      padding: 7px 12px;
+      border-radius: 9px;
+      font-size: calc(12.5px * var(--font-scale));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      line-height: 1.3;
+      overflow-wrap: break-word;
+      word-break: break-word;
+    }
+
+    .item-chip span:last-child {
+      flex-shrink: 0;
+    }
+
+    .item-chip.missing {
+      background: var(--danger-light);
+      color: var(--danger-text);
+      border: 1px solid var(--danger-border);
+      font-weight: 600;
+    }
+
+    .item-chip.half {
+      background: var(--warning-light);
+      color: var(--warning-text);
+      border: 1px solid var(--warning-border);
+      font-weight: 600;
+    }
+
+    .item-chip.complete {
+      background: var(--success-light);
+      color: var(--success-text);
+      border: 1px solid var(--success-border);
+      font-weight: 600;
+      justify-content: center;
+      padding: 8px 12px;
+    }
+
+    .card-footer-hint {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 4px;
+      font-size: 11.5px;
+      color: var(--text-subtle);
+      font-weight: 500;
+      padding-top: 6px;
+      border-top: 1px dashed #f1f5f9;
+      transition: color 0.2s;
+    }
+
+    .student-card:hover .card-footer-hint {
+      color: var(--primary);
+    }
+
+    .final-exam-alert {
+      font-size: calc(12px * var(--font-scale));
+      color: #b45309;
+      background: #fffbeb;
+      padding: 7px 12px;
+      border-radius: 8px;
+      border: 1px dashed #fcd34d;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Modal / Personal Checklist Sheet */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: #ffffff;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 540px;
+      max-height: 88vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+      border: 1px solid rgba(226, 232, 240, 0.8);
+      transform: scale(0.92) translateY(12px);
+      transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      padding: 28px;
+    }
+
+    .modal-backdrop.open .modal-card {
+      transform: scale(1) translateY(0);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-close {
+      background: #f1f5f9;
+      border: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 16px;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .modal-close:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+      transform: scale(1.06);
+    }
+
+    .modal-close:active {
+      transform: scale(0.94);
+    }
+
+    .modal-checklist {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 14px 0 20px 0;
+      background: #ffffff;
+    }
+
+    .checklist-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-light);
+      gap: 12px;
+      transition: background 0.15s;
+    }
+
+    .checklist-row:hover {
+      background: #f8fafc;
+    }
+
+    .checklist-row:last-child {
+      border-bottom: none;
+    }
+
+    /* ==========================================================================
+       COMPLETE STUDENT & GRADE PRESENTATION STYLES
+       ========================================================================== */
+    .badge-grade {
+      background: linear-gradient(135deg, #059669 0%, #0d9488 100%);
+      color: #ffffff !important;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      box-shadow: 0 2px 8px rgba(5, 150, 105, 0.28);
+      font-weight: 700;
+      padding: 4px 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .badge-grade-num {
+      background: rgba(255, 255, 255, 0.25);
+      padding: 1px 6px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+    }
+
+    .complete-student-card-content {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .complete-status-pill {
+      background: var(--success-light);
+      border: 1px solid var(--success-border);
+      color: var(--success-text);
+      padding: 7px 12px;
+      border-radius: 10px;
+      font-size: 12.5px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .score-quick-calc {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 12px;
+    }
+    .sqc-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .sqc-label {
+      font-size: 10.5px;
+      color: var(--text-muted);
+    }
+    .sqc-value {
+      font-weight: 700;
+      color: #0f172a;
+      font-size: 13px;
+    }
+    .sqc-item.total .sqc-value {
+      color: #4f46e5;
+      font-weight: 800;
+    }
+    .sqc-op {
+      font-weight: 700;
+      color: #94a3b8;
+      font-size: 14px;
+    }
+
+    .bonus-eligible-tag {
+      background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+      border: 1px dashed #f59e0b;
+      color: #92400e;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 11.5px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* Modal Grade Hero Card */
+    .modal-grade-hero {
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%);
+      border-radius: 18px;
+      color: white;
+      padding: 22px 20px;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 10px 25px -5px rgba(67, 56, 202, 0.35);
+    }
+    .modal-grade-hero::after {
+      content: '';
+      position: absolute;
+      top: -30%;
+      right: -20%;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .mgh-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .mgh-badge-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .mgh-grade-circle {
+      width: 68px;
+      height: 68px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+    }
+    .mgh-grade-sub {
+      font-size: 11px;
+      font-weight: 600;
+      opacity: 0.9;
+      line-height: 1;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .mgh-grade-val {
+      font-size: 32px;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+    .mgh-title-wrap {
+      min-width: 0;
+    }
+    .mgh-tag {
+      font-size: 11.5px;
+      background: rgba(255, 255, 255, 0.16);
+      padding: 3px 8px;
+      border-radius: 9999px;
+      display: inline-block;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    .mgh-main-title {
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .mgh-sub-title {
+      font-size: 12.5px;
+      opacity: 0.85;
+      margin-top: 2px;
+    }
+
+    /* Score calculation breakdown cards */
+    .mgh-breakdown-grid {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1.2fr;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .mgh-box {
+      text-align: center;
+      padding: 6px 4px;
+    }
+    .mgh-box-lbl {
+      font-size: 10.5px;
+      opacity: 0.8;
+      margin-bottom: 2px;
+      white-space: nowrap;
+    }
+    .mgh-box-val {
+      font-size: 17px;
+      font-weight: 700;
+    }
+    .mgh-box.highlight {
+      background: rgba(16, 185, 129, 0.25);
+      border-radius: 8px;
+      border: 1px solid rgba(52, 211, 153, 0.4);
+    }
+    .mgh-box.highlight .mgh-box-val {
+      color: #a7f3d0;
+      font-size: 19px;
+      font-weight: 800;
+    }
+    .mgh-calc-sign {
+      font-size: 16px;
+      font-weight: 700;
+      opacity: 0.6;
+    }
+
+    /* Official Disclaimer Box */
+    .unofficial-disclaimer-box {
+      background: #fffbeb;
+      border: 1.5px solid #fde68a;
+      border-left: 5px solid #f59e0b;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.1);
+    }
+    .udb-icon {
+      font-size: 24px;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .udb-content {
+      flex: 1;
+    }
+    .udb-title {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #92400e;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 3px;
+    }
+    .udb-text {
+      font-size: 14px;
+      color: #78350f;
+      line-height: 1.5;
+    }
+
+    /* Bonus Score Section */
+    .bonus-card-section {
+      background: #ffffff;
+      border: 1.5px solid #e0e7ff;
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 14px -2px rgba(99, 102, 241, 0.08);
+    }
+    .bcs-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .bcs-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .bcs-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e1b4b;
+    }
+    .bcs-badge-points {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+      font-weight: 700;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      box-shadow: 0 2px 6px rgba(217, 119, 6, 0.3);
+      white-space: nowrap;
+    }
+    .bcs-rule-banner {
+      background: #fef2f2;
+      border: 1.5px solid #fecaca;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .bcs-rule-forbid {
+      color: #991b1b;
+      font-weight: 700;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .bcs-rule-accept {
+      color: #065f46;
+      font-weight: 600;
+      display: block;
+    }
+
+    .bcs-topics-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+    }
+    .bcs-topics-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .bcs-topics-list {
+      list-style: none;
+      padding-left: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .bcs-topic-item {
+      font-size: 13px;
+      color: #1e293b;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      line-height: 1.45;
+    }
+    .bcs-topic-bullet {
+      color: #4f46e5;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* Workpiece Showcase Examples Grid */
+    .bcs-examples-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .bcs-examples-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .bcs-example-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    .bcs-example-card:hover {
+      border-color: #cbd5e1;
+      background: #ffffff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      transform: translateY(-2px);
+    }
+    .bec-icon {
+      font-size: 24px;
+      line-height: 1;
+    }
+    .bec-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .bec-desc {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* Submission details footer */
+    .bcs-submission-footer {
+      background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+      border: 1px solid #bbf7d0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 12.5px;
+      color: #166534;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .bsf-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Incomplete encouragement note */
+    .incomplete-encouragement-card {
+      background: #f8fafc;
+      border: 1.5px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 14px;
+      margin-top: 14px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .iec-title {
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .iec-text {
+      color: #64748b;
+    }
+
+    /* Toast Notification */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #0f172a;
+      color: #ffffff;
+      padding: 13px 22px;
+      border-radius: var(--radius);
+      box-shadow: 0 12px 24px -4px rgba(15, 23, 42, 0.25);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 100;
+    }
+    #toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 56px 16px;
+      color: var(--text-muted);
+    }
+
+    /* ======================================================== */
+    /* PROMINENT CENTER ANNOUNCEMENT POPUP BANNER               */
+    /* ======================================================== */
+    .announcement-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.72);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 16px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .announcement-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .announcement-card {
+      background: #ffffff;
+      border-radius: 24px;
+      width: 100%;
+      max-width: 520px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(225, 29, 72, 0.35), 0 16px 32px -16px rgba(15, 23, 42, 0.4);
+      border: 2.5px solid #fecdd3;
+      transform: scale(0.9) translateY(20px);
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      padding: 24px 26px 22px 26px;
+      text-align: center;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .announcement-backdrop.open .announcement-card {
+      transform: scale(1) translateY(0);
+    }
+
+    .announcement-close-btn {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: #64748b;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+      transition: all 0.2s;
+      z-index: 2;
+    }
+
+    .announcement-close-btn:hover {
+      background: #fee2e2;
+      color: #e11d48;
+      border-color: #fecdd3;
+      transform: scale(1.08);
+    }
+
+    .announcement-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #fff1f2;
+      color: #e11d48;
+      border: 1.5px solid #fecdd3;
+      padding: 5px 14px;
+      border-radius: var(--radius-pill);
+      font-size: calc(12.5px * var(--font-scale));
+      font-weight: 700;
+      margin: 0 auto;
+      box-shadow: 0 2px 6px rgba(225, 29, 72, 0.08);
+    }
+
+    .announcement-pulse-dot {
+      width: 8px;
+      height: 8px;
+      background-color: #e11d48;
+      border-radius: 50%;
+      animation: pulse-dot-red 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes pulse-dot-red {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.6);
+      }
+      50% {
+        opacity: 0.85;
+        transform: scale(1.25);
+        box-shadow: 0 0 0 8px rgba(225, 29, 72, 0);
+      }
+    }
+
+    .announcement-headline {
+      font-size: calc(21px * var(--font-scale));
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.35;
+      margin: 0;
+    }
+
+    .announcement-date-highlight {
+      display: inline-block;
+      color: #e11d48;
+      background: #fff1f2;
+      padding: 5px 14px;
+      border-radius: 10px;
+      border: 2px dashed #f43f5e;
+      margin-top: 6px;
+      font-size: calc(21px * var(--font-scale));
+      font-weight: 800;
+      line-height: 1.35;
+      box-shadow: 0 3px 10px rgba(225, 29, 72, 0.12);
+    }
+
+    .announcement-location-box {
+      background: linear-gradient(135deg, #fffbeb, #fef3c7);
+      border: 2px solid #fcd34d;
+      border-radius: 16px;
+      padding: 12px 18px;
+      margin: 0;
+      box-shadow: 0 4px 12px -2px rgba(217, 119, 6, 0.12);
+    }
+
+    .announcement-location-tag {
+      font-size: calc(12px * var(--font-scale));
+      font-weight: 700;
+      color: #b45309;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .announcement-location-text {
+      font-size: calc(20px * var(--font-scale));
+      font-weight: 800;
+      color: #92400e;
+      line-height: 1.3;
+    }
+
+    .announcement-location-text strong {
+      color: #b91c1c;
+      text-decoration: underline;
+      text-underline-offset: 4px;
+      background: #fef08a;
+      padding: 1px 7px;
+      border-radius: 6px;
+    }
+
+    .announcement-action-btn {
+      width: 100%;
+      padding: 13px 20px;
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, #e11d48, #be123c);
+      color: #ffffff;
+      font-weight: 800;
+      font-size: calc(15.5px * var(--font-scale));
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 6px 18px -3px rgba(225, 29, 72, 0.4);
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      margin-top: 2px;
+    }
+
+    .announcement-action-btn:hover {
+      background: linear-gradient(135deg, #be123c, #9f1239);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px -3px rgba(225, 29, 72, 0.5);
+    }
+
+    .announcement-action-btn:active {
+      transform: scale(0.98);
+    }
+
+    /* IN-PAGE CENTER BANNER IN VIEW 1 */
+    .portal-announcement-banner {
+      background: linear-gradient(135deg, #ffffff, #fff1f2);
+      border: 2px solid #fecdd3;
+      border-radius: 22px;
+      padding: 22px 26px;
+      max-width: 960px;
+      margin: 0 auto 36px auto;
+      box-shadow: 0 10px 25px -5px rgba(225, 29, 72, 0.12), var(--shadow);
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .portal-announcement-banner::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 6px;
+      background: linear-gradient(180deg, #e11d48, #f43f5e);
+    }
+
+    .portal-announcement-banner:hover {
+      transform: translateY(-3px);
+      border-color: #fda4af;
+      box-shadow: 0 14px 30px -5px rgba(225, 29, 72, 0.22);
+    }
+
+    .pab-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .pab-icon {
+      width: 54px;
+      height: 54px;
+      border-radius: 18px;
+      background: #fff1f2;
+      border: 1.5px solid #fecdd3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      flex-shrink: 0;
+    }
+
+    .pab-text-col {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .pab-main-text {
+      font-size: calc(18px * var(--font-scale));
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.4;
+    }
+
+    .pab-main-text strong {
+      color: #e11d48;
+      background: #fff1f2;
+      padding: 1px 6px;
+      border-radius: 6px;
+    }
+
+    .pab-sub-text {
+      font-size: calc(15px * var(--font-scale));
+      color: #9f1239;
+      font-weight: 700;
+      margin-top: 5px;
+    }
+
+    .pab-sub-text strong {
+      color: #b91c1c;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .pab-btn {
+      padding: 11px 20px;
+      border-radius: var(--radius);
+      background: #e11d48;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: calc(13.5px * var(--font-scale));
+      border: none;
+      white-space: nowrap;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(225, 29, 72, 0.25);
+      transition: all 0.2s;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pab-btn:hover {
+      background: #be123c;
+      transform: translateY(-1px);
+    }
+
+    /* ======================================================== */
+    /* RESPONSIVE DESIGN FOR ALL DEVICES (Mobile, Tablet, Desktop) */
+    /* ======================================================== */
+
+    /* Large Desktops (> 1200px) */
+    @media (min-width: 1201px) {
+      .room-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .student-grid {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      }
+    }
+
+    /* Tablets & Laptops (769px to 1200px) */
+    @media (max-width: 1200px) and (min-width: 769px) {
+      .container {
+        padding: 0 20px;
+      }
+      .portal-grid {
+        gap: 22px;
+      }
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 14px;
+      }
+      .room-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+      }
+      .student-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+      }
+    }
+
+    /* Mobile Standard & Small Tablets (<= 768px) */
+    @media (max-width: 768px) {
+      .container {
+        padding: 0 16px;
+      }
+      .portal-hero {
+        margin: 32px auto 24px auto;
+        padding: 0 8px;
+      }
+      .portal-hero-title {
+        font-size: calc(23px * var(--font-scale));
+      }
+      .portal-hero-desc {
+        font-size: calc(13.5px * var(--font-scale));
+      }
+      .portal-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+      .portal-card {
+        padding: 28px 22px;
+      }
+      .portal-icon-wrapper {
+        width: 76px;
+        height: 76px;
+        font-size: 40px;
+      }
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin: 16px 0;
+      }
+      .stat-card {
+        padding: 16px 18px;
+      }
+      .stat-value {
+        font-size: calc(24px * var(--font-scale));
+      }
+      .room-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      .student-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+      .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+      }
+      .search-box {
+        width: 100%;
+      }
+      .search-input {
+        font-size: 16px !important; /* Prevents auto zoom in iOS Safari */
+        padding: 11px 16px 11px 40px;
+      }
+      .filter-group {
+        width: 100%;
+        display: flex;
+      }
+      .filter-btn {
+        flex: 1;
+        justify-content: center;
+        padding: 10px 8px;
+        font-size: 12px;
+      }
+      .view-nav-header {
+        padding: 14px 16px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        margin-top: 16px;
+        margin-bottom: 16px;
+      }
+      .view-nav-header > div {
+        width: 100%;
+      }
+      .back-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 10px 14px;
+      }
+      .modal-backdrop {
+        padding: 14px;
+      }
+      .modal-card {
+        padding: 22px 18px;
+        border-radius: 18px;
+        max-height: 90dvh;
+      }
+      .switch-grade-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 10px 14px;
+      }
+      #room-header-badges {
+        width: 100%;
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      #room-header-badges .badge {
+        flex: 1;
+        justify-content: center;
+        text-align: center;
+        padding: 6px 8px;
+        font-size: 11.5px;
+      }
+      .modal-footer {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch !important;
+      }
+      .modal-footer button {
+        width: 100%;
+      }
+      .announcement-card {
+        padding: 20px 18px 18px 18px;
+        border-radius: 20px;
+        gap: 10px;
+        max-width: 440px;
+      }
+      .announcement-headline {
+        font-size: calc(18px * var(--font-scale));
+      }
+      .announcement-date-highlight {
+        font-size: calc(19px * var(--font-scale));
+        padding: 3px 12px;
+      }
+      .announcement-location-box {
+        padding: 10px 14px;
+      }
+      .announcement-location-text {
+        font-size: calc(18px * var(--font-scale));
+      }
+      .announcement-action-btn {
+        padding: 12px 18px;
+        font-size: calc(14.5px * var(--font-scale));
+      }
+      .pab-content {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 14px;
+      }
+      .pab-btn {
+        width: 100%;
+        justify-content: center;
+      }
+      #toast {
+        bottom: 16px;
+        right: 16px;
+        left: 16px;
+        justify-content: center;
+        text-align: center;
+        max-width: calc(100% - 32px);
+      }
+    }
+
+    /* Mobile Small & Compact Phones (<= 480px, e.g. iPhone SE, Galaxy fold covers, 320px-375px) */
+    @media (max-width: 480px) {
+      .container {
+        padding: 0 12px;
+      }
+      .header-content {
+        padding: 8px 0;
+        gap: 8px;
+      }
+      .brand {
+        gap: 8px;
+      }
+      .brand-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
+        border-radius: 10px;
+      }
+      .brand-title {
+        font-size: calc(15px * var(--font-scale));
+        letter-spacing: -0.2px;
+      }
+      .brand-subtitle {
+        font-size: calc(11px * var(--font-scale));
+      }
+      .live-badge {
+        padding: 4px 9px;
+        font-size: 11px;
+        gap: 5px;
+      }
+      .portal-hero {
+        margin: 20px auto 16px auto;
+      }
+      .portal-hero-badge {
+        font-size: 11px;
+        padding: 4px 10px;
+      }
+      .portal-hero-icon {
+        font-size: 34px;
+        margin-bottom: 6px;
+      }
+      .portal-hero-title {
+        font-size: calc(20px * var(--font-scale));
+      }
+      .portal-hero-desc {
+        font-size: calc(12.5px * var(--font-scale));
+        line-height: 1.5;
+      }
+      .portal-card {
+        padding: 20px 14px;
+        gap: 14px;
+        border-radius: 18px;
+      }
+      .portal-icon-wrapper {
+        width: 64px;
+        height: 64px;
+        font-size: 32px;
+        border-radius: 18px;
+      }
+      .portal-grade-title {
+        font-size: calc(18px * var(--font-scale));
+      }
+      .portal-subject {
+        font-size: calc(12.5px * var(--font-scale));
+      }
+      .portal-stats-box {
+        padding: 10px 4px;
+        gap: 4px;
+      }
+      .portal-stat-num {
+        font-size: calc(15px * var(--font-scale));
+      }
+      .portal-stat-lbl {
+        font-size: 10px;
+      }
+      .portal-action-btn {
+        padding: 12px 16px;
+        font-size: calc(13.5px * var(--font-scale));
+      }
+      .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .stat-card {
+        padding: 14px 14px;
+      }
+      .stat-value {
+        font-size: calc(22px * var(--font-scale));
+      }
+      .stat-label {
+        font-size: calc(12px * var(--font-scale));
+      }
+      .stat-subtext {
+        font-size: calc(11px * var(--font-scale));
+      }
+      .view-nav-header {
+        padding: 12px 12px;
+        gap: 10px;
+        margin-top: 14px;
+        margin-bottom: 14px;
+      }
+      .view-nav-header h2 {
+        font-size: 17px !important;
+      }
+      .room-card {
+        padding: 16px 14px;
+        gap: 12px;
+        border-radius: 14px;
+      }
+      .room-card-title {
+        font-size: calc(16px * var(--font-scale));
+      }
+      .room-card-stats {
+        padding: 10px 10px;
+        gap: 6px;
+      }
+      .room-stat-num {
+        font-size: calc(14.5px * var(--font-scale));
+      }
+      .room-stat-txt {
+        font-size: 10.5px;
+      }
+      .room-tabs {
+        margin-bottom: 14px;
+        gap: 6px;
+      }
+      .room-tab {
+        padding: 8px 13px;
+        font-size: 12px;
+      }
+      .filter-group {
+        padding: 3px;
+        gap: 2px;
+      }
+      .filter-btn {
+        padding: 8px 4px;
+        font-size: 11px;
+      }
+      .student-card {
+        padding: 14px 12px;
+        gap: 10px;
+        border-radius: 13px;
+      }
+      .student-number {
+        width: 32px;
+        height: 32px;
+        font-size: 12.5px;
+        border-radius: 8px;
+      }
+      .student-name {
+        font-size: calc(14px * var(--font-scale));
+      }
+      .student-id {
+        font-size: 11px;
+      }
+      .item-chip {
+        padding: 6px 10px;
+        font-size: calc(11.5px * var(--font-scale));
+        gap: 6px;
+      }
+      .card-footer-hint {
+        font-size: 10.5px;
+        padding-top: 5px;
+      }
+      .modal-backdrop {
+        padding: 8px;
+      }
+      .modal-card {
+        padding: 18px 14px;
+        border-radius: 16px;
+        max-height: 92dvh;
+      }
+      .modal-header {
+        margin-bottom: 14px;
+        padding-bottom: 12px;
+      }
+      .modal-header h2 {
+        font-size: 17px !important;
+      }
+      .modal-close {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+      }
+      .modal-checklist {
+        margin: 10px 0 16px 0;
+        border-radius: 10px;
+      }
+      .checklist-row {
+        padding: 11px 10px;
+        gap: 8px;
+        font-size: 12px;
+      }
+      .mgh-breakdown-grid {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+      .mgh-calc-sign {
+        display: none;
+      }
+      .mgh-top {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .bcs-examples-grid {
+        grid-template-columns: 1fr;
+      }
+      .bcs-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .bcs-submission-footer {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .announcement-card {
+        padding: 18px 14px 16px 14px;
+        border-radius: 18px;
+        gap: 9px;
+        max-width: calc(100vw - 28px);
+      }
+      .announcement-headline {
+        font-size: calc(16px * var(--font-scale));
+      }
+      .announcement-date-highlight {
+        font-size: calc(16.5px * var(--font-scale));
+        padding: 4px 10px;
+        line-height: 1.35;
+      }
+      .announcement-location-box {
+        padding: 9px 12px;
+      }
+      .announcement-location-text {
+        font-size: calc(16.5px * var(--font-scale));
+      }
+      .announcement-action-btn {
+        padding: 11px 16px;
+        font-size: calc(14px * var(--font-scale));
+      }
+      .portal-announcement-banner {
+        padding: 16px 14px;
+        border-radius: 18px;
+        margin-bottom: 24px;
+      }
+      .pab-icon {
+        width: 44px;
+        height: 44px;
+        font-size: 22px;
+      }
+      .pab-main-text {
+        font-size: calc(15px * var(--font-scale));
+      }
+      .pab-sub-text {
+        font-size: calc(13.5px * var(--font-scale));
+      }
+      #toast {
+        font-size: 12.5px;
+        padding: 10px 14px;
+      }
+    }
+
+    /* Motion Accessibility */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+      .live-dot {
+        animation: none !important;
+      }
+    }
+
+    /* Print Stylesheet */
+    @media print {
+      header, .room-tabs, .toolbar, .back-btn, .portal-action-btn, .room-btn-action, #toast {
+        display: none !important;
+      }
+      body {
+        background: white !important;
+        color: black !important;
+      }
+      .student-card {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="container header-content">
+      <div class="brand" onclick="goToPortal()" title="คลิกเพื่อกลับหน้าแรก">
+        <div class="brand-icon">📚</div>
+        <div>
+          <div class="brand-title">ระบบติดตามงานค้าง Real-time</div>
+          <div class="brand-subtitle" id="subject-label">กลุ่มสาระการเรียนรู้สังคมศึกษาฯ</div>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <div class="live-badge" id="live-indicator">
+          <span class="live-dot"></span>
+          <span>Live Sync (Excel)</span>
+          <span id="sync-time" style="font-weight: normal; opacity: 0.85;"></span>
+        </div>
+
+
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- ========================================== -->
+    <!-- VIEW 1: PORTAL หน้าแรกสุด (เลือกระดับชั้น) -->
+    <!-- ========================================== -->
+    <div id="view-portal">
+
+      <div class="portal-hero">
+        <div class="portal-hero-badge">✦ ระบบติดตามงานแบบ Real-time</div>
+        <div class="portal-hero-icon">🏫</div>
+        <h1 class="portal-hero-title">เลือกระดับชั้นที่ต้องการติดตามงาน</h1>
+        <p class="portal-hero-desc">
+          ข้อมูลซิงค์ตรงจากไฟล์ Excel ของคุณครูโดยอัตโนมัติ<br/>
+          คลิกเลือกระดับชั้นด้านล่างเพื่อตรวจสอบงานค้างของห้องเรียนและนักเรียนรายบุคคล
+        </p>
+      </div>
+
+      <!-- In-Page Center Hero Banner -->
+      <div class="portal-announcement-banner" onclick="openAnnouncement()" title="คลิกเพื่อดูประกาศขนาดใหญ่">
+        <div class="pab-content">
+          <div class="pab-icon">📢</div>
+          <div class="pab-text-col">
+            <div class="pab-main-text">
+              นักเรียนยังสามารถติดตามส่งงานได้ถึงวันที่ <strong>28 กันยายน 2569 (ไม่เกิน 12.00 น.)</strong>
+            </div>
+            <div class="pab-sub-text">
+              📍 ส่งงานได้ที่ <strong>ห้องโสตฯ เท่านั้น</strong>
+            </div>
+          </div>
+          <button class="pab-btn" onclick="event.stopPropagation(); openAnnouncement();">
+            <span>ดูประกาศด่วน</span>
+            <span>↗</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="portal-grid">
+
+        <!-- Portal Card M.3 -->
+        <div class="portal-card m3-card" onclick="selectGrade('m3')">
+          <div class="portal-icon-wrapper">🏛️</div>
+          <div>
+            <div class="portal-grade-title">มัธยมศึกษาปีที่ 3</div>
+            <div class="portal-subject">วิชาประวัติศาสตร์ (ส23102) • 6 ห้องเรียน</div>
+          </div>
+
+          <div class="portal-stats-box">
+            <div class="portal-stat-col">
+              <div class="portal-stat-num" id="portal-m3-total">0</div>
+              <div class="portal-stat-lbl">นักเรียนทั้งหมด</div>
+            </div>
+            <div class="portal-stat-col">
+              <div class="portal-stat-num" style="color: var(--success);" id="portal-m3-complete">0</div>
+              <div class="portal-stat-lbl">ส่งครบ 100%</div>
+            </div>
+            <div class="portal-stat-col">
+              <div class="portal-stat-num" style="color: var(--danger);" id="portal-m3-incomplete">0</div>
+              <div class="portal-stat-lbl">ยังมีงานค้าง</div>
+            </div>
+          </div>
+
+          <div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">
+              <span>ความคืบหน้ารวม</span>
+              <strong id="portal-m3-rate">0%</strong>
+            </div>
+            <div style="background: #e2e8f0; border-radius: 9999px; height: 8px; overflow: hidden;">
+              <div id="portal-m3-bar" style="background: var(--primary); height: 100%; width: 0%;"></div>
+            </div>
+          </div>
+
+          <button class="portal-action-btn">
+            <span>เข้าสู่แดชบอร์ด ม.3</span>
+            <span>→</span>
+          </button>
+        </div>
+
+        <!-- Portal Card M.5 -->
+        <div class="portal-card m5-card" onclick="selectGrade('m5')">
+          <div class="portal-icon-wrapper">🌏</div>
+          <div>
+            <div class="portal-grade-title">มัธยมศึกษาปีที่ 5</div>
+            <div class="portal-subject">วิชาสังคมศึกษา (ส32101) • 5 ห้องเรียน</div>
+          </div>
+
+          <div class="portal-stats-box">
+            <div class="portal-stat-col">
+              <div class="portal-stat-num" id="portal-m5-total">0</div>
+              <div class="portal-stat-lbl">นักเรียนทั้งหมด</div>
+            </div>
+            <div class="portal-stat-col">
+              <div class="portal-stat-num" style="color: var(--success);" id="portal-m5-complete">0</div>
+              <div class="portal-stat-lbl">ส่งครบ 100%</div>
+            </div>
+            <div class="portal-stat-col">
+              <div class="portal-stat-num" style="color: var(--danger);" id="portal-m5-incomplete">0</div>
+              <div class="portal-stat-lbl">ยังมีงานค้าง</div>
+            </div>
+          </div>
+
+          <div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">
+              <span>ความคืบหน้ารวม</span>
+              <strong id="portal-m5-rate">0%</strong>
+            </div>
+            <div style="background: #e2e8f0; border-radius: 9999px; height: 8px; overflow: hidden;">
+              <div id="portal-m5-bar" style="background: var(--primary); height: 100%; width: 0%;"></div>
+            </div>
+          </div>
+
+          <button class="portal-action-btn">
+            <span>เข้าสู่แดชบอร์ด ม.5</span>
+            <span>→</span>
+          </button>
+        </div>
+
+        <!-- Portal Card M.6 -->
+        <div class="portal-card m6-card" onclick="selectGrade('m6')">
+          <div class="portal-icon-wrapper">⚖️</div>
+          <div>
+            <div class="portal-grade-title">มัธยมศึกษาปีที่ 6</div>
+            <div class="portal-subject">วิชาหน้าที่พลเมือง (ต้านทุจริต) • 4 ห้องเรียน</div>
+          </div>
+
+          <div class="portal-stats-box">
+            <div class="portal-stat-col">
+              <div class="portal-stat-num" id="portal-m6-total">0</div>
+              <div class="portal-stat-lbl">นักเรียนทั้งหมด</div>
+            </div>
+            <div class="portal-stat-col">
+              <div class="portal-stat-num" style="color: var(--success);" id="portal-m6-complete">0</div>
+              <div class="portal-stat-lbl">ส่งครบ 100%</div>
+            </div>
+            <div class="portal-stat-col">
+              <div class="portal-stat-num" style="color: var(--danger);" id="portal-m6-incomplete">0</div>
+              <div class="portal-stat-lbl">ยังมีงานค้าง</div>
+            </div>
+          </div>
+
+          <div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">
+              <span>ความคืบหน้ารวม</span>
+              <strong id="portal-m6-rate">0%</strong>
+            </div>
+            <div style="background: #e2e8f0; border-radius: 9999px; height: 8px; overflow: hidden;">
+              <div id="portal-m6-bar" style="background: #ea580c; height: 100%; width: 0%;"></div>
+            </div>
+          </div>
+
+          <button class="portal-action-btn">
+            <span>เข้าสู่แดชบอร์ด ม.6</span>
+            <span>→</span>
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- VIEW 2: GRADE DASHBOARD แดชบอร์ด & เลือกห้อง -->
+    <!-- ========================================== -->
+    <div id="view-grade-dashboard" style="display: none;">
+
+      <!-- Grade Nav Header -->
+      <div class="view-nav-header">
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+          <button class="back-btn" onclick="goToPortal()">
+            ← เลือกระดับชั้นอื่น (กลับหน้าแรก)
+          </button>
+          <div>
+            <h2 style="font-size: 20px; font-weight: 800; color: #1e293b;" id="dashboard-grade-title">
+              แดชบอร์ดระดับชั้น ม.5
+            </h2>
+            <div style="font-size: 13px; color: var(--text-muted);" id="dashboard-grade-subject">
+              วิชาสังคมศึกษา (ส32101)
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;" id="dashboard-grade-switchers">
+          <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">เลือกระดับชั้น:</span>
+          <button class="btn switch-grade-btn" id="switch-m3-btn" onclick="selectGrade('m3')" style="font-size: 13px; padding: 6px 14px;">ม.3</button>
+          <button class="btn switch-grade-btn" id="switch-m5-btn" onclick="selectGrade('m5')" style="font-size: 13px; padding: 6px 14px;">ม.5</button>
+          <button class="btn switch-grade-btn" id="switch-m6-btn" onclick="selectGrade('m6')" style="font-size: 13px; padding: 6px 14px;">ม.6</button>
+        </div>
+      </div>
+
+      <!-- Overall Statistics for Selected Grade -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">นักเรียนทั้งหมด</div>
+          <div class="stat-value" id="stat-total">0 คน</div>
+          <div class="stat-subtext" id="stat-grade-label">ระดับชั้น ม.5</div>
+        </div>
+        <div class="stat-card" style="border-left: 4px solid var(--success);">
+          <div class="stat-label">ส่งงานครบ 100%</div>
+          <div class="stat-value" style="color: var(--success);" id="stat-complete">0 คน</div>
+          <div class="stat-subtext" id="stat-complete-pct">คิดเป็น 0%</div>
+        </div>
+        <div class="stat-card" style="border-left: 4px solid var(--danger);">
+          <div class="stat-label">ยังมีงานค้าง</div>
+          <div class="stat-value" style="color: var(--danger);" id="stat-incomplete">0 คน</div>
+          <div class="stat-subtext">ต้องติดตามงาน</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">ความคืบหน้ารวม</div>
+          <div class="stat-value" id="stat-rate">0%</div>
+          <div style="background: #e2e8f0; border-radius: 9999px; height: 8px; overflow: hidden; margin-top: 4px;">
+            <div id="stat-bar" style="background: var(--primary); height: 100%; width: 0%; transition: width 0.4s;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Search Bar on Dashboard -->
+      <div class="toolbar" style="margin-top: 24px; margin-bottom: 12px;">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input 
+            type="text" 
+            id="dashboard-search-input" 
+            class="search-input" 
+            placeholder="ค้นหารายบุคคลด่วน: พิมพ์ชื่อ, เลขประจำตัว 5 หลัก, หรือเลขที่..." 
+            oninput="handleDashboardSearch(this.value)"
+          />
+        </div>
+      </div>
+
+      <!-- Search Results Section (Shown only when searching) -->
+      <div id="dashboard-search-section" style="display: none; margin-bottom: 28px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h3 style="font-size: 16px; font-weight: 700; color: #1e293b;">
+            🎯 ผลการค้นหานักเรียน (<span id="dashboard-search-count">0</span> คน)
+          </h3>
+          <button class="btn" onclick="clearDashboardSearch()" style="font-size: 12px; padding: 4px 10px;">
+            ✕ ล้างการค้นหา
+          </button>
+        </div>
+        <div class="student-grid" id="dashboard-search-grid">
+          <!-- Rendered matching student cards -->
+        </div>
+      </div>
+
+      <!-- Classroom Section Header -->
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 20px; margin-bottom: 4px;">
+        <div>
+          <h2 style="font-size: 19px; font-weight: 800; color: #1e293b;" id="dashboard-rooms-title">
+            🏫 เลือกห้องเรียนที่ต้องการติดตามงานค้าง
+          </h2>
+          <div style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">
+            คลิกปุ่ม "ติดตามงานค้างห้องนี้" เพื่อตรวจสอบรายละเอียดเฉพาะงานที่ค้างของนักเรียนแต่ละคน
+          </div>
+        </div>
+      </div>
+
+      <!-- Room Cards Grid -->
+      <div class="room-grid" id="room-cards-grid">
+        <!-- Rendered room cards -->
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- VIEW 3: CLASSROOM ติดตามงานค้างรายห้อง -->
+    <!-- ========================================== -->
+    <div id="view-classroom" style="display: none;">
+
+      <!-- Navigation & Room Info Header -->
+      <div class="view-nav-header">
+        <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+          <button class="back-btn" onclick="goToGradeDashboard()">
+            ← กลับหน้ารวมห้องเรียน (<span id="back-grade-name">ม.5</span>)
+          </button>
+          <div>
+            <h2 style="font-size: 20px; font-weight: 800; color: #1e293b;" id="room-header-title">
+              ห้อง ม.5/1
+            </h2>
+            <div style="font-size: 13px; color: var(--text-muted);" id="room-header-subject">
+              วิชาสังคมศึกษา (ส32101)
+            </div>
+          </div>
+        </div>
+
+        <!-- Badges for this room -->
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;" id="room-header-badges">
+          <!-- Generated room stats -->
+        </div>
+      </div>
+
+      <!-- Quick Room Switcher Tabs -->
+      <div class="room-tabs" id="room-tabs">
+        <!-- Generated tabs for quick room jump -->
+      </div>
+
+      <!-- Toolbar: Search within room & Filter -->
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input 
+            type="text" 
+            id="room-search-input" 
+            class="search-input" 
+            placeholder="ค้นหาในห้องนี้: ชื่อ, เลขประจำตัว, หรือเลขที่..." 
+            oninput="handleRoomSearch(this.value)"
+          />
+        </div>
+
+        <div class="filter-group">
+          <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">👥 ทั้งหมด</button>
+          <button class="filter-btn" data-filter="incomplete" onclick="setFilter('incomplete')">🔥 เฉพาะคนค้างงาน</button>
+          <button class="filter-btn" data-filter="complete" onclick="setFilter('complete')">✨ คนที่ครบแล้ว</button>
+        </div>
+      </div>
+
+      <!-- Students Grid (Showing ONLY missing work) -->
+      <div class="student-grid" id="room-student-grid">
+        <!-- Rendered student cards -->
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Student Self-Check Portal Modal -->
+  <div class="modal-backdrop" id="student-modal" onclick="closeModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <div style="font-size: 13px; color: var(--text-muted);" id="modal-room-label">ม.5/1</div>
+          <h2 style="font-size: 20px; font-weight: 700;" id="modal-student-name">ชื่อนักเรียน</h2>
+          <div style="font-size: 13px; color: var(--text-muted);" id="modal-student-id">เลขประจำตัว: 21155 | เลขที่ 3</div>
+        </div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+
+      <div id="modal-dynamic-body">
+        <!-- Rendered dynamically by openStudentModal based on completion status -->
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding-top: 14px; border-top: 1px solid var(--border);">
+        <span style="font-size: 13px; color: var(--text-muted);" id="modal-final-status"></span>
+        <button class="btn btn-primary" onclick="closeModal()">ปิดหน้าต่าง</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Urgent Announcement Center Popup Modal -->
+  <div class="announcement-backdrop" id="announcement-modal" onclick="closeAnnouncement(event)">
+    <div class="announcement-card" onclick="event.stopPropagation()">
+      <button class="announcement-close-btn" onclick="closeAnnouncement()" title="ปิดประกาศ">✕</button>
+      
+      <div class="announcement-badge">
+        <span class="announcement-pulse-dot"></span>
+        <span>📢 ประกาศสำคัญด่วนที่สุด</span>
+      </div>
+
+      <h2 class="announcement-headline">
+        นักเรียนยังสามารถติดตามส่งงานได้ถึงวันที่<br/>
+        <span class="announcement-date-highlight">28 กันยายน 2569 (ไม่เกิน 12.00 น.)</span>
+      </h2>
+
+      <div class="announcement-location-box">
+        <div class="announcement-location-tag">
+          <span>📍 สถานที่ส่งงาน</span>
+        </div>
+        <div class="announcement-location-text">
+          ส่งงานได้ที่ <strong>ห้องโสตฯ</strong> เท่านั้น
+        </div>
+      </div>
+
+      <button class="announcement-action-btn" onclick="closeAnnouncement()">
+        <span>✓ รับทราบ (เข้าสู่ระบบติดตามงาน)</span>
+        <span>→</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Real-time Toast -->
+  <div id="toast">
+    <span>🔔</span>
+    <span id="toast-text">ข้อมูลอัปเดตเรียบร้อยแล้ว</span>
+  </div>
+
+  <script>
+    // State management: 3-step hierarchy
+    let appData = null;
+    let currentView = 'portal'; // 'portal' | 'grade_dashboard' | 'classroom'
+    let currentGrade = null;    // 'm3' | 'm5'
+    let currentRoom = null;
+    let currentFilter = 'all'; // 'all' | 'incomplete' | 'complete'
+    let dashboardSearchQuery = '';
+    let roomSearchQuery = '';
+    let lastRenderedView = null;
+
+    // Initialize application
+    function init() {
+      // 1. Load from initial data for zero-delay instant render
+      if (window.INITIAL_DATA) {
+        appData = window.INITIAL_DATA;
+        document.getElementById('sync-time').textContent = appData.mtime_str ? `(${appData.mtime_str})` : '';
+        renderApp();
+      }
+
+      // 2. Open prominent urgent announcement popup in the center of the screen
+      setTimeout(() => {
+        openAnnouncement();
+      }, 350);
+
+      // 3. Start Real-time Auto-Sync from Excel
+      startRealtimeExcelWatcher();
+
+      // 4. Connect to Firebase if configured
+      if (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.databaseURL) {
+        initFirebase();
+      }
+    }
+
+    // Auto-poll Excel updates with lightweight version.json and SSE support
+    function startRealtimeExcelWatcher() {
+      let lastMtime = appData ? (appData.mtime || 0) : 0;
+      let isFetching = false;
+
+      // 1. SSE for instantaneous real-time updates (Local, Wi-Fi & Live Cloudflare Tunnel)
+      if (window.location.protocol.startsWith('http')) {
+        try {
+          const evtSource = new EventSource('/api/events');
+          evtSource.onmessage = async (e) => {
+            try {
+              const msg = JSON.parse(e.data);
+              if (msg && msg.event === 'reload') {
+                const res = await fetch('/api/data?_t=' + Date.now(), { cache: 'no-store' });
+                if (res.ok) {
+                  const newData = await res.json();
+                  if (newData && newData.mtime) {
+                    lastMtime = newData.mtime;
+                    appData = newData;
+                    document.getElementById('sync-time').textContent = appData.mtime_str ? `(${appData.mtime_str})` : '';
+                    renderApp();
+                    showToast('⚡ ข้อมูลอัปเดตจากไฟล์ Excel เรียบร้อยแล้ว');
+                  }
+                }
+              }
+            } catch (err) {}
+          };
+          evtSource.onerror = () => {
+            try { evtSource.close(); } catch (e) {}
+          };
+        } catch (err) {}
+      }
+
+      // 2. Ultra-lightweight version polling for online Vercel web app
+      async function checkVersion() {
+        if (isFetching) return;
+        isFetching = true;
+        try {
+          // Poll tiny 50-byte version.json first
+          const vRes = await fetch('version.json?_t=' + Date.now(), { cache: 'no-store' });
+          if (vRes.ok) {
+            const vData = await vRes.json();
+            if (vData && vData.mtime && vData.mtime !== lastMtime) {
+              const dRes = await fetch('data.json?_t=' + Date.now(), { cache: 'no-store' });
+              if (dRes.ok) {
+                const newData = await dRes.json();
+                if (newData && newData.mtime) {
+                  lastMtime = newData.mtime;
+                  appData = newData;
+                  document.getElementById('sync-time').textContent = appData.mtime_str ? `(${appData.mtime_str})` : '';
+                  renderApp();
+                  showToast('⚡ ข้อมูลอัปเดตจากไฟล์ Excel เรียบร้อยแล้ว');
+                }
+              }
+            }
+          } else {
+            // Fallback to data.json directly if version.json is not found
+            const res = await fetch('data.json?_t=' + Date.now(), { cache: 'no-store' });
+            if (res.ok) {
+              const newData = await res.json();
+              if (newData && newData.mtime && newData.mtime !== lastMtime) {
+                lastMtime = newData.mtime;
+                appData = newData;
+                document.getElementById('sync-time').textContent = appData.mtime_str ? `(${appData.mtime_str})` : '';
+                renderApp();
+                showToast('⚡ ข้อมูลอัปเดตจากไฟล์ Excel เรียบร้อยแล้ว');
+              }
+            }
+          }
+        } catch (e) {} finally {
+          isFetching = false;
+        }
+      }
+
+      setInterval(checkVersion, 2500);
+    }
+
+    // Optional background WebSocket listener
+    function initFirebase() {
+      const dbUrl = window.FIREBASE_CONFIG.databaseURL;
+      if (!dbUrl || dbUrl.trim() === '') return;
+
+      try {
+        if (!firebase.apps.length) {
+          firebase.initializeApp({ databaseURL: dbUrl.trim() });
+        }
+        const db = firebase.database();
+        const ref = db.ref('assignment_tracker');
+
+        ref.on('value', (snapshot) => {
+          const val = snapshot.val();
+          if (val && val.grades) {
+            appData = val;
+            document.getElementById('sync-time').textContent = appData.mtime_str ? `(${appData.mtime_str})` : '';
+            renderApp();
+            showToast('⚡ ข้อมูลอัปเดตสดจากเครื่องคุณครูเรียบร้อยแล้ว');
+          }
+        });
+      } catch (err) {}
+    }
+
+    // STEP 1 -> STEP 2: Select Grade from Portal
+    function selectGrade(gradeKey) {
+      currentGrade = gradeKey;
+      currentRoom = null;
+      currentView = 'grade_dashboard';
+      dashboardSearchQuery = '';
+      const sInput = document.getElementById('dashboard-search-input');
+      if (sInput) sInput.value = '';
+      
+      renderApp();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // STEP 2 -> STEP 1: Return to Portal (เลือกระดับชั้นใหม่)
+    function goToPortal() {
+      currentView = 'portal';
+      currentGrade = null;
+      currentRoom = null;
+      renderApp();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      openAnnouncement();
+    }
+
+    // STEP 2 -> STEP 3: Enter Classroom
+    function goToRoom(roomLabel) {
+      currentRoom = roomLabel;
+      currentView = 'classroom';
+      currentFilter = 'all';
+      roomSearchQuery = '';
+      const input = document.getElementById('room-search-input');
+      if (input) input.value = '';
+      
+      renderApp();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // STEP 3 -> STEP 2: Return to Grade Dashboard (เลือกห้องใหม่)
+    function goToGradeDashboard() {
+      currentView = 'grade_dashboard';
+      currentRoom = null;
+      renderApp();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function setFilter(filter) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === filter);
+      });
+      renderRoomStudents();
+    }
+
+    function handleDashboardSearch(val) {
+      dashboardSearchQuery = val.trim().toLowerCase();
+      renderDashboardSearch();
+    }
+
+    function clearDashboardSearch() {
+      dashboardSearchQuery = '';
+      document.getElementById('dashboard-search-input').value = '';
+      renderDashboardSearch();
+    }
+
+    function handleRoomSearch(val) {
+      roomSearchQuery = val.trim().toLowerCase();
+      renderRoomStudents();
+    }
+
+
+    // Main render function across all 3 views
+    function renderApp() {
+      if (!appData || !appData.grades) return;
+
+      // Update Portal Cards stats (View 1)
+      ['m3', 'm5', 'm6'].forEach(gk => {
+        const gdata = appData.grades[gk];
+        if (gdata) {
+          const gtot = gdata.total_students;
+          const gcomp = gdata.total_complete;
+          const ginc = gdata.total_incomplete;
+          const grate = gtot > 0 ? Math.round((gcomp / gtot) * 100) : 0;
+
+          const elTot = document.getElementById(`portal-${gk}-total`);
+          const elComp = document.getElementById(`portal-${gk}-complete`);
+          const elInc = document.getElementById(`portal-${gk}-incomplete`);
+          const elRate = document.getElementById(`portal-${gk}-rate`);
+          const elBar = document.getElementById(`portal-${gk}-bar`);
+
+          if (elTot) elTot.textContent = `${gtot} คน`;
+          if (elComp) elComp.textContent = `${gcomp} คน`;
+          if (elInc) elInc.textContent = `${ginc} คน`;
+          if (elRate) elRate.textContent = `${grate}%`;
+          if (elBar) elBar.style.width = `${grate}%`;
+        }
+      });
+
+      // View Switching Logic with Smooth Transitions
+      const viewPortal = document.getElementById('view-portal');
+      const viewDashboard = document.getElementById('view-grade-dashboard');
+      const viewClassroom = document.getElementById('view-classroom');
+
+      const isViewChange = (lastRenderedView !== currentView);
+      lastRenderedView = currentView;
+
+      if (currentView === 'portal' || !currentGrade) {
+        // VIEW 1: PORTAL
+        viewPortal.style.display = 'block';
+        viewDashboard.style.display = 'none';
+        viewClassroom.style.display = 'none';
+        if (isViewChange) {
+          viewPortal.classList.remove('view-animate');
+          void viewPortal.offsetWidth;
+          viewPortal.classList.add('view-animate');
+        }
+        document.getElementById('subject-label').textContent = 'กลุ่มสาระการเรียนรู้สังคมศึกษาฯ';
+      } else if (currentView === 'grade_dashboard') {
+        // VIEW 2: GRADE DASHBOARD
+        viewPortal.style.display = 'none';
+        viewDashboard.style.display = 'block';
+        viewClassroom.style.display = 'none';
+        if (isViewChange) {
+          viewDashboard.classList.remove('view-animate');
+          void viewDashboard.offsetWidth;
+          viewDashboard.classList.add('view-animate');
+        }
+        renderGradeDashboard();
+      } else if (currentView === 'classroom') {
+        // VIEW 3: CLASSROOM DETAIL
+        viewPortal.style.display = 'none';
+        viewDashboard.style.display = 'none';
+        viewClassroom.style.display = 'block';
+        if (isViewChange) {
+          viewClassroom.classList.remove('view-animate');
+          void viewClassroom.offsetWidth;
+          viewClassroom.classList.add('view-animate');
+        }
+        renderClassroomView();
+      }
+    }
+
+    // Render VIEW 2: Grade Dashboard
+    function renderGradeDashboard() {
+      const gradeData = appData.grades[currentGrade];
+      if (!gradeData) return;
+
+      document.getElementById('subject-label').textContent = `วิชา${gradeData.subject}`;
+      document.getElementById('dashboard-grade-title').textContent = `แดชบอร์ดระดับชั้น ${gradeData.title}`;
+      document.getElementById('dashboard-grade-subject').textContent = `วิชา${gradeData.subject} (${gradeData.title})`;
+      
+      // Update switcher buttons active state
+      ['m3', 'm5', 'm6'].forEach(gk => {
+        const btn = document.getElementById(`switch-${gk}-btn`);
+        if (btn) {
+          if (gk === currentGrade) {
+            btn.style.background = 'var(--primary)';
+            btn.style.color = '#ffffff';
+            btn.style.borderColor = 'var(--primary)';
+            btn.style.fontWeight = '700';
+          } else {
+            btn.style.background = '#ffffff';
+            btn.style.color = '#475569';
+            btn.style.borderColor = '#cbd5e1';
+            btn.style.fontWeight = '500';
+          }
+        }
+      });
+
+      // Overview statistics for selected grade
+      const total = gradeData.total_students;
+      const complete = gradeData.total_complete;
+      const incomplete = gradeData.total_incomplete;
+      const rate = total > 0 ? Math.round((complete / total) * 100) : 0;
+
+      document.getElementById('stat-total').textContent = `${total} คน`;
+      document.getElementById('stat-complete').textContent = `${complete} คน`;
+      document.getElementById('stat-incomplete').textContent = `${incomplete} คน`;
+      document.getElementById('stat-complete-pct').textContent = `คิดเป็น ${rate}% ของทั้งระดับชั้น`;
+      document.getElementById('stat-rate').textContent = `${rate}%`;
+      document.getElementById('stat-bar').style.width = `${rate}%`;
+      document.getElementById('stat-grade-label').textContent = gradeData.title;
+
+      renderDashboardRooms();
+      renderDashboardSearch();
+    }
+
+    // Render Room Cards in Dashboard
+    function renderDashboardRooms() {
+      const gradeData = appData.grades[currentGrade];
+      document.getElementById('dashboard-rooms-title').textContent = `🏫 เลือกห้องเรียนที่ต้องการติดตามงานค้าง (${gradeData.title})`;
+      
+      const grid = document.getElementById('room-cards-grid');
+      grid.innerHTML = '';
+      const rooms = Object.keys(gradeData.rooms);
+
+      rooms.forEach(rKey => {
+        const rdata = gradeData.rooms[rKey];
+        const pct = rdata.total > 0 ? Math.round((rdata.complete / rdata.total) * 100) : 0;
+        
+        const card = document.createElement('div');
+        card.className = 'room-card';
+        card.onclick = () => goToRoom(rKey);
+
+        card.innerHTML = `
+          <div class="room-card-header">
+            <div class="room-card-title">
+              <span>🏫 ${rKey}</span>
+            </div>
+            <span class="badge ${rdata.incomplete === 0 ? 'badge-success' : 'badge-danger'}">
+              ${rdata.incomplete === 0 ? '✨ ส่งครบทุกคน' : `ค้าง ${rdata.incomplete} คน`}
+            </span>
+          </div>
+
+          <div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">
+              <span>ความคืบหน้าการส่งงาน</span>
+              <strong>${pct}%</strong>
+            </div>
+            <div style="background: #e2e8f0; border-radius: 9999px; height: 8px; overflow: hidden;">
+              <div style="background: ${pct === 100 ? 'var(--success)' : 'var(--primary)'}; height: 100%; width: ${pct}%;"></div>
+            </div>
+          </div>
+
+          <div class="room-card-stats">
+            <div class="room-stat-item">
+              <span class="room-stat-num" style="color: var(--success);">${rdata.complete} คน</span>
+              <span class="room-stat-txt">ส่งงานครบ 100%</span>
+            </div>
+            <div class="room-stat-item">
+              <span class="room-stat-num" style="color: ${rdata.incomplete > 0 ? 'var(--danger)' : '#64748b'};">${rdata.incomplete} คน</span>
+              <span class="room-stat-txt">ยังมีงานค้าง</span>
+            </div>
+          </div>
+
+          <div style="font-size: 12px; color: var(--text-muted); text-align: center;">
+            นักเรียนทั้งหมด ${rdata.total} คน
+          </div>
+
+          <button class="room-btn-action" onclick="event.stopPropagation(); goToRoom('${rKey}')">
+            <span>📋 ติดตามงานค้างห้องนี้</span>
+            <span>→</span>
+          </button>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    // Render Dashboard Search Results
+    function renderDashboardSearch() {
+      const section = document.getElementById('dashboard-search-section');
+      const grid = document.getElementById('dashboard-search-grid');
+      const countLabel = document.getElementById('dashboard-search-count');
+
+      if (!dashboardSearchQuery) {
+        section.style.display = 'none';
+        grid.innerHTML = '';
+        return;
+      }
+
+      section.style.display = 'block';
+      grid.innerHTML = '';
+
+      const gradeData = appData.grades[currentGrade];
+      let matches = [];
+
+      Object.keys(gradeData.rooms).forEach(rKey => {
+        const room = gradeData.rooms[rKey];
+        room.students.forEach(st => {
+          if (
+            st.name.toLowerCase().includes(dashboardSearchQuery) ||
+            st.student_id.includes(dashboardSearchQuery) ||
+            String(st.num) === dashboardSearchQuery
+          ) {
+            matches.push(st);
+          }
+        });
+      });
+
+      countLabel.textContent = matches.length;
+
+      if (matches.length === 0) {
+        grid.innerHTML = '<div class="empty-state" style="grid-column: 1 / -1;">ไม่พบรายชื่อนักเรียนที่ตรงกับคำค้นหา</div>';
+        return;
+      }
+
+      matches.forEach((st, idx) => {
+        grid.appendChild(createStudentCard(st, idx));
+      });
+    }
+
+    // Render VIEW 3: Classroom View
+    function renderClassroomView() {
+      const gradeData = appData.grades[currentGrade];
+      const rdata = gradeData.rooms[currentRoom];
+      if (!rdata) return;
+
+      document.getElementById('back-grade-name').textContent = gradeData.title;
+      document.getElementById('room-header-title').textContent = `ห้องเรียน ${currentRoom}`;
+      document.getElementById('room-header-subject').textContent = `วิชา${gradeData.subject}`;
+
+      const badges = document.getElementById('room-header-badges');
+      badges.innerHTML = `
+        <span class="badge" style="background: #f1f5f9; color: #475569; font-size: 12px;">ทั้งหมด ${rdata.total} คน</span>
+        <span class="badge badge-success" style="font-size: 12px;">ส่งครบ ${rdata.complete} คน</span>
+        <span class="badge ${rdata.incomplete > 0 ? 'badge-danger' : 'badge-success'}" style="font-size: 12px;">
+          ${rdata.incomplete > 0 ? `ค้าง ${rdata.incomplete} คน` : 'ส่งครบทุกคน'}
+        </span>
+      `;
+
+      // Update filter button labels with counts
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        const filter = btn.dataset.filter;
+        btn.classList.toggle('active', filter === currentFilter);
+        if (filter === 'incomplete') btn.textContent = `🔥 เฉพาะคนค้างงาน (${rdata.incomplete})`;
+        if (filter === 'all') btn.textContent = `👥 ทั้งหมด (${rdata.total})`;
+        if (filter === 'complete') btn.textContent = `✨ คนที่ครบแล้ว (${rdata.complete})`;
+      });
+
+      renderRoomTabs();
+      renderRoomStudents();
+    }
+
+    // Render Quick Room Switcher Tabs
+    function renderRoomTabs() {
+      const tabsContainer = document.getElementById('room-tabs');
+      tabsContainer.innerHTML = '';
+      const gradeData = appData.grades[currentGrade];
+      const rooms = Object.keys(gradeData.rooms);
+
+      rooms.forEach(roomKey => {
+        const rdata = gradeData.rooms[roomKey];
+        const btn = document.createElement('button');
+        btn.className = `room-tab ${roomKey === currentRoom ? 'active' : ''}`;
+        btn.onclick = () => goToRoom(roomKey);
+        btn.innerHTML = `
+          <span>${roomKey}</span>
+          <span class="room-tab-badge">${rdata.incomplete > 0 ? `ค้าง ${rdata.incomplete}` : 'ครบ'}</span>
+        `;
+        tabsContainer.appendChild(btn);
+      });
+    }
+
+    // Render Student Cards in Classroom (SHOWING ONLY MISSING ASSIGNMENTS)
+    function renderRoomStudents() {
+      const grid = document.getElementById('room-student-grid');
+      grid.innerHTML = '';
+
+      if (!currentRoom || !appData.grades[currentGrade].rooms[currentRoom]) {
+        grid.innerHTML = '<div class="empty-state">ไม่มีข้อมูลห้องเรียน</div>';
+        return;
+      }
+
+      const roomData = appData.grades[currentGrade].rooms[currentRoom];
+      let students = roomData.students;
+
+      // Filter by completion status
+      if (currentFilter === 'incomplete') {
+        students = students.filter(s => !s.is_complete);
+      } else if (currentFilter === 'complete') {
+        students = students.filter(s => s.is_complete);
+      }
+
+      // Search filter within room
+      if (roomSearchQuery) {
+        students = students.filter(s => 
+          s.name.toLowerCase().includes(roomSearchQuery) ||
+          s.student_id.includes(roomSearchQuery) ||
+          String(s.num) === roomSearchQuery
+        );
+      }
+
+      if (students.length === 0) {
+        if (currentFilter === 'incomplete') {
+          grid.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+              <div style="font-size: 40px; margin-bottom: 8px;">🎉</div>
+              <h3 style="font-size: 18px; font-weight: 700; color: #166534;">ยินดีด้วย! ส่งงานครบทุกคนแล้วในห้องนี้</h3>
+              <p style="font-size: 14px; margin-top: 4px;">ไม่มีนักเรียนที่ค้างงานในห้อง ${currentRoom}</p>
+            </div>
+          `;
+        } else {
+          grid.innerHTML = '<div class="empty-state" style="grid-column: 1 / -1;">ไม่พบรายชื่อนักเรียนที่ตรงกับคำค้นหา</div>';
+        }
+        return;
+      }
+
+      students.forEach((st, idx) => {
+        grid.appendChild(createStudentCard(st, idx));
+      });
+    }
+
+    // Create a student card (SHOWING GRADE FOR COMPLETE STUDENTS, MISSING FOR INCOMPLETE)
+    function createStudentCard(st, index = 0) {
+      const card = document.createElement('div');
+      card.className = 'student-card';
+      if (typeof index === 'number') {
+        card.style.animationDelay = `${Math.min(index * 0.035, 0.6)}s`;
+      }
+      card.onclick = () => openStudentModal(st);
+
+      // Status badge
+      let badgeHtml = '';
+      if (st.is_complete) {
+        badgeHtml = `<span class="badge badge-grade"><span>🏆 เกรด ${st.grade_text}</span><span class="badge-grade-num">${st.total_score_100}/100</span></span>`;
+      } else if (st.missing_count <= 2) {
+        badgeHtml = `<span class="badge badge-warning">ค้าง ${st.missing_count} งาน</span>`;
+      } else {
+        badgeHtml = `<span class="badge badge-danger">ค้าง ${st.missing_count} งาน</span>`;
+      }
+
+      let bodyContentHtml = '';
+      let footerHintHtml = '';
+
+      if (st.is_complete) {
+        if (st.grade === 'm6') {
+          // Complete M.6 student: show unified total score and grade (no old/new breakdown, no +5 bonus)
+          bodyContentHtml = `
+            <div class="complete-student-card-content">
+              <div class="complete-status-pill">
+                <span>✨ ส่งงานครบทุกชิ้นแล้ว (100%)</span>
+                <span style="font-size:11px; opacity:0.85;">ไม่มีงานค้าง</span>
+              </div>
+              <div class="score-quick-calc" style="justify-content: center;">
+                <div class="sqc-item total" style="flex: 1; max-width: 220px; padding: 8px 12px;">
+                  <span class="sqc-label">คะแนนรวมสุทธิ (เต็ม 100)</span>
+                  <span class="sqc-value" style="font-size: 1.35rem;">${st.total_score_100 !== undefined && st.total_score_100 !== null ? st.total_score_100 : '-'}</span>
+                </div>
+              </div>
+              ${!st.has_test1 ? `
+                <div style="margin-top: 8px; font-size: 11px; color: var(--warning-text); background: var(--warning-light); border: 1px dashed var(--warning-border); padding: 5px 8px; border-radius: 6px; text-align: center; font-weight: 500;">
+                  ⚠️ รอสอบเก็บตก ทดสอบ 1
+                </div>
+              ` : ''}
+            </div>
+          `;
+          footerHintHtml = `
+            <div class="card-footer-hint">
+              <span>แตะเพื่อดูรายละเอียดคะแนน & เกรด</span>
+              <span>→</span>
+            </div>
+          `;
+        } else {
+          // Complete M.3 / M.5 student: show celebration, score pill breakdown & bonus points opportunity hint
+          bodyContentHtml = `
+            <div class="complete-student-card-content">
+              <div class="complete-status-pill">
+                <span>✨ ส่งงานครบทุกชิ้นแล้ว (100%)</span>
+                <span style="font-size:11px; opacity:0.85;">ไม่มีงานค้าง</span>
+              </div>
+              <div class="score-quick-calc">
+                <div class="sqc-item">
+                  <span class="sqc-label">คะแนนเดิม</span>
+                  <span class="sqc-value">${st.old_score !== undefined && st.old_score !== null ? st.old_score : '-'}</span>
+                </div>
+                <span class="sqc-op">+</span>
+                <div class="sqc-item">
+                  <span class="sqc-label">คะแนนใหม่</span>
+                  <span class="sqc-value">${st.new_score !== undefined && st.new_score !== null ? st.new_score : '-'}</span>
+                </div>
+                <span class="sqc-op">=</span>
+                <div class="sqc-item total">
+                  <span class="sqc-label">รวม (100)</span>
+                  <span class="sqc-value">${st.total_score_100 !== undefined && st.total_score_100 !== null ? st.total_score_100 : '-'}</span>
+                </div>
+              </div>
+              <div class="bonus-eligible-tag">
+                <span>🌟</span>
+                <span>มีสิทธิ์ส่งชิ้นงานเพิ่มคะแนนพิเศษ (+5)</span>
+              </div>
+            </div>
+          `;
+          footerHintHtml = `
+            <div class="card-footer-hint">
+              <span>แตะเพื่อดูรายละเอียดเกรด & ชิ้นงานพิเศษ</span>
+              <span>→</span>
+            </div>
+          `;
+        }
+      } else {
+        // Incomplete student: show missing assignments only
+        const missingAssignments = st.assignments.filter(a => a.status !== 'complete');
+        let chipsHtml = '';
+        missingAssignments.forEach(a => {
+          if (a.status === 'half') {
+            chipsHtml += `<div class="item-chip half"><span>⚠️ ${a.title}</span><span style="font-size:11px;">(ค้างอีก 1 หน้า)</span></div>`;
+          } else {
+            chipsHtml += `<div class="item-chip missing"><span>✗ ${a.title}</span><span style="font-size:11px;">(ยังไม่ส่ง)</span></div>`;
+          }
+        });
+
+        if (st.grade === 'm6' && !st.has_test1) {
+          chipsHtml += `<div class="item-chip missing" style="border-left-color: #f59e0b; background: #fffbeb;"><span>⚠️ ยังไม่ได้สอบ (ทดสอบ 1)</span><span style="font-size:11px;">(รอสอบเก็บตก)</span></div>`;
+        }
+
+        bodyContentHtml = `
+          <div class="items-container">
+            ${chipsHtml}
+          </div>
+        `;
+        footerHintHtml = `
+          <div class="card-footer-hint">
+            <span>แตะเพื่อดูเช็กลิสต์รายบุคคล</span>
+            <span>→</span>
+          </div>
+        `;
+      }
+
+      let finalNoteHtml = '';
+      if (st.grade !== 'm6' && !st.has_final) {
+        finalNoteHtml = '<div class="final-exam-alert">⚠️ ยังไม่ได้สอบปลายภาค</div>';
+      }
+
+      card.innerHTML = `
+        <div class="student-header">
+          <div class="student-info">
+            <div class="student-number">${st.num}</div>
+            <div>
+              <div class="student-name">${st.name}</div>
+              <div class="student-id">ห้อง ${st.room} | เลขประจำตัว: ${st.student_id || '-'}</div>
+            </div>
+          </div>
+          ${badgeHtml}
+        </div>
+
+        ${bodyContentHtml}
+
+        ${finalNoteHtml}
+
+        ${footerHintHtml}
+      `;
+
+      return card;
+    }
+
+    // Modal view for individual student (SHOWING GRADE + BONUS OR MISSING CHECKLIST)
+    function openStudentModal(student) {
+      document.getElementById('modal-room-label').textContent = `ห้องเรียน ${student.room}`;
+      document.getElementById('modal-student-name').textContent = student.name;
+      document.getElementById('modal-student-id').textContent = `เลขที่ ${student.num} | เลขประจำตัว: ${student.student_id || '-'}`;
+
+      const dynamicBody = document.getElementById('modal-dynamic-body');
+
+      if (student.is_complete) {
+        const subjectName = student.grade === 'm3' ? 'วิชาประวัติศาสตร์ (ส23102)' : (student.grade === 'm5' ? 'วิชาสังคมศึกษา (ส32101)' : 'วิชาหน้าที่พลเมือง (ต้านทุจริต)');
+        
+        if (student.grade === 'm6') {
+          // M.6 complete modal view
+          dynamicBody.innerHTML = `
+            <!-- 1. Grade Hero Banner -->
+            <div class="modal-grade-hero">
+              <div class="mgh-top">
+                <div class="mgh-badge-wrap">
+                  <div class="mgh-grade-circle">
+                    <span class="mgh-grade-sub">เกรด</span>
+                    <span class="mgh-grade-val">${student.grade_text}</span>
+                  </div>
+                  <div class="mgh-title-wrap">
+                    <span class="mgh-tag">✨ ส่งงานครบ 100% เรียบร้อยแล้ว</span>
+                    <div class="mgh-main-title">ประมวลผลคะแนนและเกรด</div>
+                    <div class="mgh-sub-title">${subjectName}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Score breakdown grid for M.6 -->
+              <div class="mgh-breakdown-grid" style="grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));">
+                <div class="mgh-box">
+                  <div class="mgh-box-lbl">เวลาเรียน (20)</div>
+                  <div class="mgh-box-val">${student.attendance_score !== undefined && student.attendance_score !== null ? student.attendance_score : '20'}</div>
+                </div>
+                <div class="mgh-box">
+                  <div class="mgh-box-lbl">ทดสอบ 1 (20)</div>
+                  <div class="mgh-box-val">${student.test1_score !== null && student.test1_score !== undefined ? student.test1_score : '<span style="color:#ef4444;font-size:13px;">รอสอบ</span>'}</div>
+                </div>
+                <div class="mgh-box">
+                  <div class="mgh-box-lbl">งานเดี่ยว (15)</div>
+                  <div class="mgh-box-val">${student.assignments && student.assignments[0] ? student.assignments[0].score : '-'}</div>
+                </div>
+                <div class="mgh-box">
+                  <div class="mgh-box-lbl">งานกลุ่ม (45)</div>
+                  <div class="mgh-box-val">${student.assignments && student.assignments[1] ? student.assignments[1].score : '-'}</div>
+                </div>
+                <div class="mgh-box highlight">
+                  <div class="mgh-box-lbl">คะแนนรวม (เต็ม 100)</div>
+                  <div class="mgh-box-val">${student.total_score_100 !== undefined && student.total_score_100 !== null ? student.total_score_100 : '-'} <span style="font-size:12px; font-weight:normal; opacity:0.8;">คะแนน</span></div>
+                </div>
+              </div>
+            </div>
+
+            ${!student.has_test1 ? `
+              <div class="unofficial-disclaimer-box" style="border-left-color: #f59e0b; background: #fffbeb; margin-top: 14px;">
+                <div class="udb-icon">⚠️</div>
+                <div class="udb-content">
+                  <div class="udb-title" style="color: #b45309;">แจ้งเตือนการสอบเก็บตก</div>
+                  <div class="udb-text">
+                    <strong>นักเรียนยังไม่ได้สอบ "ทดสอบ 1" (คะแนนเต็ม 20) คะแนนที่แสดงยังไม่ได้รวมคะแนนทดสอบนี้ โปรดติดต่อผู้สอนเพื่อสอบเก็บตก</strong>
+                  </div>
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- 2. Prominent Unofficial Disclaimer -->
+            <div class="unofficial-disclaimer-box">
+              <div class="udb-icon">⚠️</div>
+              <div class="udb-content">
+                <div class="udb-title">หมายเหตุแจ้งเตือนสำคัญ</div>
+                <div class="udb-text">
+                  <strong>คะแนนและผลการเรียนที่ปรากฏ เป็นคะแนนอย่างไม่เป็นทางการ คะแนนอาจจะมีการปรับเปลี่ยนได้</strong>
+                </div>
+              </div>
+            </div>
+          `;
+        } else {
+          // M.3 and M.5 complete modal view
+          let topicsHtml = '';
+          if (student.grade === 'm3') {
+            topicsHtml = `
+              <li class="bcs-topic-item"><span class="bcs-topic-bullet">1.</span> <div><strong>สงครามโลกครั้งที่ 1 (World War I)</strong> - สาเหตุ, ประเทศคู่สงคราม และผลกระทบต่อไทยและโลก</div></li>
+              <li class="bcs-topic-item"><span class="bcs-topic-bullet">2.</span> <div><strong>สงครามโลกครั้งที่ 2 (World War II)</strong> - ชนวนเหตุสำคัญ, ฝ่ายสัมพันธมิตร vs อักษะ และบทเรียนประวัติศาสตร์</div></li>
+              <li class="bcs-topic-item"><span class="bcs-topic-bullet">3.</span> <div><strong>เรื่องอื่น ๆ ในบทเรียนวิชาประวัติศาสตร์ ม.3</strong> - หรือพัฒนาการทางประวัติศาสตร์ไทยในยุคต่าง ๆ</div></li>
+            `;
+          } else {
+            topicsHtml = `
+              <li class="bcs-topic-item"><span class="bcs-topic-bullet">1.</span> <div><strong>อุปสงค์ - อุปทาน (Demand & Supply)</strong> - กฎอุปสงค์ อุปทาน ปัจจัยกำหนด และภาวะดุลยภาพตลาด</div></li>
+              <li class="bcs-topic-item"><span class="bcs-topic-bullet">2.</span> <div><strong>การแทรกแซงราคาของรัฐบาล</strong> - การประกันราคาขั้นต่ำ / การควบคุมราคาขั้นสูง และผลกระทบทางเศรษฐกิจ</div></li>
+              <li class="bcs-topic-item"><span class="bcs-topic-bullet">3.</span> <div><strong>ระบบเศรษฐกิจในโลกปัจจุบัน</strong> - ทุนนิยม, สังคมนิยม และระบบเศรษฐกิจแบบผสม (เปรียบเทียบจุดเด่น-จุดด้อย)</div></li>
+              <li class="bcs-topic-item"><span class="bcs-topic-bullet">4.</span> <div><strong>หัวข้ออื่น ๆ ในบทเรียนวิชาสังคมศึกษา ม.5</strong> - นโยบายการเงินการคลัง หรือเศรษฐกิจพอเพียง</div></li>
+            `;
+          }
+
+          dynamicBody.innerHTML = `
+            <!-- 1. Grade Hero Banner -->
+            <div class="modal-grade-hero">
+              <div class="mgh-top">
+                <div class="mgh-badge-wrap">
+                  <div class="mgh-grade-circle">
+                    <span class="mgh-grade-sub">เกรด</span>
+                    <span class="mgh-grade-val">${student.grade_text}</span>
+                  </div>
+                  <div class="mgh-title-wrap">
+                    <span class="mgh-tag">✨ ส่งงานครบ 100% เรียบร้อยแล้ว</span>
+                    <div class="mgh-main-title">ประมวลผลคะแนนและเกรด</div>
+                    <div class="mgh-sub-title">${subjectName}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Score breakdown grid -->
+              <div class="mgh-breakdown-grid">
+                <div class="mgh-box">
+                  <div class="mgh-box-lbl">คะแนนบันทึกเดิม</div>
+                  <div class="mgh-box-val">${student.old_score !== undefined && student.old_score !== null ? student.old_score : '-'}</div>
+                </div>
+                <div class="mgh-calc-sign">+</div>
+                <div class="mgh-box">
+                  <div class="mgh-box-lbl">คะแนนเก็บต่อเนื่อง</div>
+                  <div class="mgh-box-val">${student.new_score !== undefined && student.new_score !== null ? student.new_score : '-'}</div>
+                </div>
+                <div class="mgh-calc-sign">=</div>
+                <div class="mgh-box highlight">
+                  <div class="mgh-box-lbl">คะแนนรวม (เต็ม 100)</div>
+                  <div class="mgh-box-val">${student.total_score_100 !== undefined && student.total_score_100 !== null ? student.total_score_100 : '-'} <span style="font-size:12px; font-weight:normal; opacity:0.8;">คะแนน</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Prominent Unofficial Disclaimer -->
+            <div class="unofficial-disclaimer-box">
+              <div class="udb-icon">⚠️</div>
+              <div class="udb-content">
+                <div class="udb-title">หมายเหตุแจ้งเตือนสำคัญ</div>
+                <div class="udb-text">
+                  <strong>คะแนนและผลการเรียนที่ปรากฏ เป็นคะแนนอย่างไม่เป็นทางการ คะแนนอาจจะมีการปรับเปลี่ยนได้</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Bonus Score Opportunity Section (+5 Points) -->
+            <div class="bonus-card-section">
+              <div class="bcs-header">
+                <div class="bcs-title-wrap">
+                  <span style="font-size:22px;">🌟</span>
+                  <div>
+                    <div class="bcs-title">กิจกรรมชิ้นงานเพิ่มคะแนนพิเศษ</div>
+                    <div style="font-size:12px; color:var(--text-muted);">เปิดสิทธิ์เฉพาะนักเรียนที่ส่งงานเก็บครบแล้วเท่านั้น</div>
+                  </div>
+                </div>
+                <span class="bcs-badge-points">สูงสุด +5 คะแนน</span>
+              </div>
+
+              <!-- Strict workpiece rule -->
+              <div class="bcs-rule-banner">
+                <span class="bcs-rule-forbid">❌ ข้อห้ามเด็ดขาด: ไม่รับแผนผังความคิด (Mind Map) ทุกกรณี!</span>
+                <span class="bcs-rule-accept">✅ เงื่อนไข: สามารถเพิ่มคะแนนได้ไม่เกิน 5 คะแนน โดยต้องทำเป็น "ชิ้นงานประดิษฐ์" เท่านั้น</span>
+              </div>
+
+              <!-- Topics -->
+              <div class="bcs-topics-box">
+                <div class="bcs-topics-title">🎯 หัวข้อที่กำหนดให้เลือกทำ (เลือก 1 หัวข้อ):</div>
+                <ul class="bcs-topics-list">
+                  ${topicsHtml}
+                </ul>
+              </div>
+
+              <!-- Visual Examples of Workpieces -->
+              <div class="bcs-examples-title">💡 รูปแบบชิ้นงานประดิษฐ์ที่แนะนำ (ทำอย่างประณีตและสร้างสรรค์):</div>
+              <div class="bcs-examples-grid">
+                <div class="bcs-example-card">
+                  <div class="bec-icon">📖</div>
+                  <div class="bec-name">สมุดเล่มเล็ก (Mini Booklet)</div>
+                  <div class="bec-desc">พับหรือเย็บเล่ม มีหน้าปก ชื่อเรื่อง เนื้อหาสรุปกระชับ พร้อมภาพประกอบและระบายสีสันสวยงาม</div>
+                </div>
+                <div class="bcs-example-card">
+                  <div class="bec-icon">🎪</div>
+                  <div class="bec-name">ป๊อปอัพ 3 มิติ (Pop-up Card)</div>
+                  <div class="bec-desc">การ์ดหรือแผ่นพับที่มีกลไก 3 มิติเด้งขึ้นมาเมื่อเปิดดู มีองค์ประกอบภาพและคำอธิบายสร้างสรรค์</div>
+                </div>
+                <div class="bcs-example-card">
+                  <div class="bec-icon">🎨</div>
+                  <div class="bec-name">สื่อชิ้นงานประดิษฐ์อื่น ๆ</div>
+                  <div class="bec-desc">วงล้อหมุนความรู้ (Info Wheel), แผ่นพับไดคัททรงเรขาคณิต หรือโมเดลจำลองความรู้</div>
+                </div>
+              </div>
+
+              <!-- Submission Details -->
+              <div class="bcs-submission-footer">
+                <div class="bsf-item"><span>⏰ <strong>วันส่งชิ้นงานอัพคะแนน:</strong> สามารถส่งได้วันจันทร์ ที่ 28 กันยายน 2569 (ไม่เกิน 13.00 น.)</span></div>
+                <div class="bsf-item"><span>📍 <strong>สถานที่ส่ง:</strong> ห้องโสตฯ เท่านั้น</span></div>
+              </div>
+            </div>
+          `;
+        }
+      } else {
+        const missingAssignments = student.assignments.filter(a => a.status !== 'complete');
+        let checklistRows = '';
+        missingAssignments.forEach(a => {
+          let statusBadge = '';
+          if (a.status === 'half') {
+            statusBadge = `<span class="badge badge-warning">ค้างส่งอีก 1 หน้า</span>`;
+          } else {
+            statusBadge = `<span class="badge badge-danger">ยังไม่ส่ง</span>`;
+          }
+
+          checklistRows += `
+            <div class="checklist-row">
+              <div>
+                <div style="font-weight: 600; color: var(--danger-text);">📌 ${a.title}</div>
+                ${a.note ? `<div style="font-size: 12px; color: var(--warning-text); margin-top: 2px;">${a.note}</div>` : ''}
+              </div>
+              <div>${statusBadge}</div>
+            </div>
+          `;
+        });
+
+        if (student.grade === 'm6' && !student.has_test1) {
+          checklistRows += `
+            <div class="checklist-row" style="background: #fffbeb; border-color: #fde68a;">
+              <div>
+                <div style="font-weight: 600; color: #b45309;">⚠️ การทดสอบ 1 (คะแนนเต็ม 20)</div>
+                <div style="font-size: 12px; color: var(--warning-text); margin-top: 2px;">ยังไม่มีคะแนนสอบ (รอสอบเก็บตก)</div>
+              </div>
+              <div><span class="badge badge-warning" style="background:#fef3c7; color:#b45309;">ยังไม่ได้สอบ</span></div>
+            </div>
+          `;
+        }
+
+        const totalMissingCount = missingAssignments.length + ((student.grade === 'm6' && !student.has_test1) ? 1 : 0);
+
+        const encouragementHtml = student.grade === 'm6' ? `
+          <div class="incomplete-encouragement-card">
+            <div class="iec-title">💡 ส่งงานครบเพื่อดูผลคะแนนและเกรด</div>
+            <div class="iec-text">
+              เมื่อนักเรียนส่งงานที่ค้างครบทุกชิ้นแล้ว ระบบจะประมวลผลคะแนนรวม 100 คะแนนและเกรดให้ทันที<br/>
+              ⏰ <strong>กำหนดการส่งงาน:</strong> โปรดรีบติดต่อส่งงานค้างกับผู้สอนโดยเร็ว
+            </div>
+          </div>
+        ` : `
+          <div class="incomplete-encouragement-card">
+            <div class="iec-title">💡 ส่งงานครบเพื่อดูผลคะแนนและรับสิทธิ์พิเศษ</div>
+            <div class="iec-text">
+              เมื่อนักเรียนส่งงานที่ค้างครบทุกชิ้นแล้ว ระบบจะประมวลผลคะแนนรวม 100 คะแนนและเกรดให้ทันที 
+              รวมถึงจะได้รับสิทธิ์ทำชิ้นงานประดิษฐ์เพื่อเพิ่มคะแนนพิเศษ (+5 คะแนน)!<br/>
+              ⏰ <strong>กำหนดการสำคัญ:</strong><br/>
+              • ติดตามส่งงานค้างได้ถึง: <strong>28 กันยายน 2569 (ไม่เกิน 12.00 น.)</strong> ที่ห้องโสตฯ เท่านั้น<br/>
+              • ชิ้นงานอัพคะแนนส่งได้: <strong>วันจันทร์ ที่ 28 กันยายน 2569 (ไม่เกิน 13.00 น.)</strong> ที่ห้องโสตฯ เท่านั้น
+            </div>
+          </div>
+        `;
+
+        dynamicBody.innerHTML = `
+          <div id="modal-hero-banner" style="padding: 12px 16px; border-radius: 10px; margin-bottom: 16px; font-weight: 600; background: var(--danger-light); color: var(--danger-text); border: 1px solid var(--danger-border);">
+            ⚠️ มีรายการที่ต้องติดตามทั้งหมด ${totalMissingCount} รายการ
+          </div>
+
+          <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 8px; color: #1e293b;" id="modal-checklist-title">
+            📌 รายการงาน/การทดสอบที่ค้าง (${totalMissingCount} รายการ)
+          </h3>
+          <div class="modal-checklist">
+            ${checklistRows}
+          </div>
+
+          ${encouragementHtml}
+        `;
+      }
+
+      // Final exam status in modal footer
+      const finalStatus = document.getElementById('modal-final-status');
+      if (student.grade === 'm6') {
+        finalStatus.style.display = 'none';
+      } else {
+        finalStatus.style.display = 'inline-flex';
+        if (!student.has_final) {
+          finalStatus.innerHTML = `<span style="color: var(--danger-text); font-weight: 600;">⚠️ ยังไม่ได้สอบปลายภาค</span>`;
+        } else {
+          finalStatus.innerHTML = `<span style="color: var(--success-text); font-weight: 600;">✓ สอบปลายภาคแล้ว</span>`;
+        }
+      }
+
+      document.getElementById('student-modal').classList.add('open');
+    }
+
+    function closeModal(e) {
+      if (e && e.target !== e.currentTarget && !e.target.classList.contains('modal-close')) return;
+      document.getElementById('student-modal').classList.remove('open');
+    }
+
+    function openAnnouncement() {
+      const modal = document.getElementById('announcement-modal');
+      if (modal) modal.classList.add('open');
+    }
+
+    function closeAnnouncement(e) {
+      if (e && e.target !== e.currentTarget && !e.target.classList.contains('announcement-close-btn') && !e.target.closest('.announcement-action-btn')) return;
+      const modal = document.getElementById('announcement-modal');
+      if (modal) modal.classList.remove('open');
+    }
+
+    function showToast(text) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-text').textContent = text;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3500);
+    }
+
+    // Run on startup
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

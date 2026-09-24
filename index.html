@@ -1325,6 +1325,42 @@
       font-weight: 700;
       opacity: 0.6;
     }
+    .mgh-total-score-card {
+      background: rgba(16, 185, 129, 0.22);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1.5px solid rgba(52, 211, 153, 0.5);
+      border-radius: 14px;
+      padding: 14px 20px;
+      text-align: center;
+      margin-top: 6px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+    }
+    .mgh-total-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.95);
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .mgh-total-value {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 6px;
+    }
+    .mgh-total-num {
+      font-size: 32px;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    }
+    .mgh-total-unit {
+      font-size: 15px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.85);
+    }
 
     /* Official Disclaimer Box */
     .unofficial-disclaimer-box {
@@ -2901,7 +2937,10 @@
         const ref = db.ref('assignment_tracker');
 
         ref.on('value', (snapshot) => {
-          const val = snapshot.val();
+          let val = snapshot.val();
+          if (typeof val === 'string') {
+            try { val = JSON.parse(val); } catch (e) {}
+          }
           if (val && val.grades) {
             appData = val;
             document.getElementById('sync-time').textContent = appData.mtime_str ? `(${appData.mtime_str})` : '';
@@ -3360,20 +3399,10 @@
                 <span>✨ ส่งงานครบทุกชิ้นแล้ว (100%)</span>
                 <span style="font-size:11px; opacity:0.85;">ไม่มีงานค้าง</span>
               </div>
-              <div class="score-quick-calc">
-                <div class="sqc-item">
-                  <span class="sqc-label">คะแนนเดิม</span>
-                  <span class="sqc-value">${st.old_score !== undefined && st.old_score !== null ? st.old_score : '-'}</span>
-                </div>
-                <span class="sqc-op">+</span>
-                <div class="sqc-item">
-                  <span class="sqc-label">คะแนนใหม่</span>
-                  <span class="sqc-value">${st.new_score !== undefined && st.new_score !== null ? st.new_score : '-'}</span>
-                </div>
-                <span class="sqc-op">=</span>
-                <div class="sqc-item total">
-                  <span class="sqc-label">รวม (100)</span>
-                  <span class="sqc-value">${st.total_score_100 !== undefined && st.total_score_100 !== null ? st.total_score_100 : '-'}</span>
+              <div class="score-quick-calc" style="justify-content: center;">
+                <div class="sqc-item total" style="flex: 1; max-width: 220px; padding: 8px 12px;">
+                  <span class="sqc-label">คะแนนรวม (เต็ม 100)</span>
+                  <span class="sqc-value" style="font-size: 1.35rem;">${st.total_score_100 !== undefined && st.total_score_100 !== null ? st.total_score_100 : '-'}</span>
                 </div>
               </div>
               <div class="bonus-eligible-tag">
@@ -3475,27 +3504,12 @@
                 </div>
               </div>
 
-              <!-- Score breakdown grid for M.6 -->
-              <div class="mgh-breakdown-grid" style="grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));">
-                <div class="mgh-box">
-                  <div class="mgh-box-lbl">เวลาเรียน (20)</div>
-                  <div class="mgh-box-val">${student.attendance_score !== undefined && student.attendance_score !== null ? student.attendance_score : '20'}</div>
-                </div>
-                <div class="mgh-box">
-                  <div class="mgh-box-lbl">ทดสอบ 1 (20)</div>
-                  <div class="mgh-box-val">${student.test1_score !== null && student.test1_score !== undefined ? student.test1_score : '<span style="color:#ef4444;font-size:13px;">รอสอบ</span>'}</div>
-                </div>
-                <div class="mgh-box">
-                  <div class="mgh-box-lbl">งานเดี่ยว (15)</div>
-                  <div class="mgh-box-val">${student.assignments && student.assignments[0] ? student.assignments[0].score : '-'}</div>
-                </div>
-                <div class="mgh-box">
-                  <div class="mgh-box-lbl">งานกลุ่ม (45)</div>
-                  <div class="mgh-box-val">${student.assignments && student.assignments[1] ? student.assignments[1].score : '-'}</div>
-                </div>
-                <div class="mgh-box highlight">
-                  <div class="mgh-box-lbl">คะแนนรวม (เต็ม 100)</div>
-                  <div class="mgh-box-val">${student.total_score_100 !== undefined && student.total_score_100 !== null ? student.total_score_100 : '-'} <span style="font-size:12px; font-weight:normal; opacity:0.8;">คะแนน</span></div>
+              <!-- Unified Total Score Card (No Breakdown) -->
+              <div class="mgh-total-score-card">
+                <div class="mgh-total-label">คะแนนรวม (เต็ม 100)</div>
+                <div class="mgh-total-value">
+                  <span class="mgh-total-num">${student.total_score_100 !== undefined && student.total_score_100 !== null ? student.total_score_100 : '-'}</span>
+                  <span class="mgh-total-unit">คะแนน</span>
                 </div>
               </div>
             </div>
@@ -3558,21 +3572,12 @@
                 </div>
               </div>
 
-              <!-- Score breakdown grid -->
-              <div class="mgh-breakdown-grid">
-                <div class="mgh-box">
-                  <div class="mgh-box-lbl">คะแนนบันทึกเดิม</div>
-                  <div class="mgh-box-val">${student.old_score !== undefined && student.old_score !== null ? student.old_score : '-'}</div>
-                </div>
-                <div class="mgh-calc-sign">+</div>
-                <div class="mgh-box">
-                  <div class="mgh-box-lbl">คะแนนเก็บต่อเนื่อง</div>
-                  <div class="mgh-box-val">${student.new_score !== undefined && student.new_score !== null ? student.new_score : '-'}</div>
-                </div>
-                <div class="mgh-calc-sign">=</div>
-                <div class="mgh-box highlight">
-                  <div class="mgh-box-lbl">คะแนนรวม (เต็ม 100)</div>
-                  <div class="mgh-box-val">${student.total_score_100 !== undefined && student.total_score_100 !== null ? student.total_score_100 : '-'} <span style="font-size:12px; font-weight:normal; opacity:0.8;">คะแนน</span></div>
+              <!-- Unified Total Score Card (No Breakdown) -->
+              <div class="mgh-total-score-card">
+                <div class="mgh-total-label">คะแนนรวม (เต็ม 100)</div>
+                <div class="mgh-total-value">
+                  <span class="mgh-total-num">${student.total_score_100 !== undefined && student.total_score_100 !== null ? student.total_score_100 : '-'}</span>
+                  <span class="mgh-total-unit">คะแนน</span>
                 </div>
               </div>
             </div>
